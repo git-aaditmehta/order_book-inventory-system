@@ -27,3 +27,18 @@ api.interceptors.request.use(async (config) => {
 }, (error) => {
   return Promise.reject(error);
 });
+
+// Response interceptor to handle 401 Unauthorized automatically
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      console.warn('Session expired or unauthorized. Clearing token.');
+      localStorage.removeItem('supabase_token');
+      localStorage.removeItem('user_role');
+      localStorage.removeItem('user_email');
+      window.dispatchEvent(new Event('auth_logout'));
+    }
+    return Promise.reject(error);
+  }
+);

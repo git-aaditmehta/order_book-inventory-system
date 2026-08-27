@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Jewelry, RawMaterial, UserRole } from '../types';
 import { 
-  Gem, Plus, Search, RefreshCw, Edit2, Trash2, X, Layers, Scale 
+  Gem, Plus, Search, RefreshCw, Edit2, Trash2, X, Layers, Scale, CheckCircle2
 } from 'lucide-react';
 
 interface JewelryCatalogProps {
@@ -222,14 +222,21 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
                   <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1">
                     <Layers className="w-3.5 h-3.5 text-[var(--color-accent)]" /> BOM Recipe (per 1 unit):
                   </span>
-                  <div className="bg-[var(--color-paper)] p-3 rounded-lg border border-[var(--color-border)] space-y-1.5 text-xs">
+                  <div className="bg-[var(--color-paper)] p-3 rounded-lg border border-[var(--color-border)] space-y-2 text-xs">
                     {j.recipes.length === 0 ? (
                       <span className="text-[var(--color-text-muted)]">No recipes configured.</span>
                     ) : (
                       j.recipes.map((r, i) => (
-                        <div key={i} className="flex justify-between items-center py-0.5">
-                          <span className="font-medium text-white">{r.raw_material_name} ({r.raw_material_color})</span>
-                          <span className="font-bold text-[var(--color-accent)]">{r.required_quantity} units</span>
+                        <div key={i} className="flex justify-between items-center py-1 px-2.5 rounded bg-[#131b2e] border border-[#233256]">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-white">{r.raw_material_name || 'Material'}</span>
+                            {r.raw_material_color && (
+                              <span className="badge-gold text-[10px] py-0.5 px-2">{r.raw_material_color}</span>
+                            )}
+                          </div>
+                          <span className="font-bold text-[var(--color-accent)] bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">
+                            {r.required_quantity} units
+                          </span>
                         </div>
                       ))
                     )}
@@ -256,81 +263,120 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
       {/* Add Modal */}
       {addModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg">Add Jewelry Master Item</h3>
-              <button onClick={() => setAddModalOpen(false)}><X className="w-5 h-5" /></button>
+              <h3 className="font-bold text-lg text-white">Add Jewelry Master Item</h3>
+              <button onClick={() => setAddModalOpen(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleAddSubmit} className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">SKU ID *</label>
-                  <input type="text" placeholder="e.g. J-101" value={skuId} onChange={e => setSkuId(e.target.value)} className="input-field" required />
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">SKU ID *</label>
+                  <input type="text" placeholder="e.g. J-908" value={skuId} onChange={e => setSkuId(e.target.value)} className="input-field font-semibold" required />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Color *</label>
-                  <input type="text" placeholder="e.g. Rose Gold" value={color} onChange={e => setColor(e.target.value)} className="input-field" required />
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Color *</label>
+                  <input type="text" placeholder="e.g. Blue" value={color} onChange={e => setColor(e.target.value)} className="input-field font-semibold" required />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Weight Before (g)</label>
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight Before (g)</label>
                   <input type="number" step="0.001" value={weightBefore} onChange={e => setWeightBefore(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Weight After (g)</label>
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight After (g)</label>
                   <input type="number" step="0.001" value={weightAfter} onChange={e => setWeightAfter(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
                 </div>
               </div>
 
               {/* Recipe Selector List */}
-              <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+              <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)]">
-                    Raw Material Recipes (per 1 unit)
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)] flex items-center gap-1.5">
+                    <Layers className="w-4 h-4" /> Raw Material Recipes (per 1 unit)
                   </span>
-                  <button type="button" onClick={handleAddRecipeRow} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 font-semibold">
-                    <Plus className="w-3 h-3" /> Add Material
+                  <button type="button" onClick={handleAddRecipeRow} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 font-semibold cursor-pointer">
+                    <Plus className="w-3.5 h-3.5" /> Add Material
                   </button>
                 </div>
 
-                {recipeInputs.map((row, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <select
-                      value={row.raw_material_id}
-                      onChange={e => handleRecipeChange(idx, 'raw_material_id', e.target.value)}
-                      className="input-field flex-1"
-                      required
-                    >
-                      <option value="">-- Select Raw Material --</option>
-                      {rawMaterials.map(rm => (
-                        <option key={rm.id} value={rm.id}>
-                          {rm.name} ({rm.color}) — {rm.packets} pkts avail
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Qty"
-                      value={row.required_quantity}
-                      onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
-                      className="input-field w-24"
-                      required
-                    />
-                    {recipeInputs.length > 1 && (
-                      <button type="button" onClick={() => handleRemoveRecipeRow(idx)} className="text-red-400 p-2">
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {recipeInputs.map((row, idx) => {
+                  const selectedMat = rawMaterials.find(rm => rm.id === row.raw_material_id);
+                  return (
+                    <div key={idx} className="bg-[#0b0f19] border border-[var(--color-border)] p-3 rounded-xl space-y-2">
+                      <div className="flex gap-3 items-center">
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                            Raw Material #{idx + 1}
+                          </label>
+                          <select
+                            value={row.raw_material_id}
+                            onChange={e => handleRecipeChange(idx, 'raw_material_id', e.target.value)}
+                            className="input-field w-full text-white font-medium bg-[#131b2e] border-[#263352]"
+                            required
+                          >
+                            <option value="" className="bg-[#131b2e] text-gray-400">-- Select Raw Material --</option>
+                            {rawMaterials.map(rm => (
+                              <option key={rm.id} value={rm.id} className="bg-[#131b2e] text-white">
+                                {rm.name} ({rm.color}) — {rm.packets} pkts ({rm.total_units} units avail)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-28">
+                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                            Required Qty
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="Qty"
+                            value={row.required_quantity}
+                            onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
+                            className="input-field w-full text-center font-bold text-amber-400"
+                            required
+                          />
+                        </div>
+
+                        {recipeInputs.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveRecipeRow(idx)} 
+                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg mt-4 cursor-pointer"
+                            title="Remove Row"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Selected Material Info Chip */}
+                      {selectedMat ? (
+                        <div className="flex items-center justify-between text-xs bg-[#131b2e] px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-300">
+                          <span className="font-semibold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                            Selected: {selectedMat.name} ({selectedMat.color})
+                          </span>
+                          <span className="text-[11px] text-gray-300">
+                            Available Stock: <strong className="text-amber-400">{selectedMat.total_units}</strong> units ({selectedMat.packets} pkts + {selectedMat.loose_units} loose)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-gray-500 italic pl-1">
+                          Please select a raw material from the dropdown.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => setAddModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">Save Jewelry Item</button>
+              <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
+                <button type="button" onClick={() => setAddModalOpen(false)} className="btn-secondary w-auto px-5">Cancel</button>
+                <button type="submit" className="btn-primary w-auto px-6">Save Jewelry Item</button>
               </div>
             </form>
           </div>
@@ -340,69 +386,107 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
       {/* Edit Modal */}
       {editModalOpen && selectedJewelry && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg">Edit Jewelry: {selectedJewelry.sku_id} ({selectedJewelry.color})</h3>
-              <button onClick={() => setEditModalOpen(false)}><X className="w-5 h-5" /></button>
+              <h3 className="font-bold text-lg text-white">Edit Jewelry: {selectedJewelry.sku_id} ({selectedJewelry.color})</h3>
+              <button onClick={() => setEditModalOpen(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleEditSubmit} className="space-y-4 text-sm">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Weight Before (g)</label>
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight Before (g)</label>
                   <input type="number" step="0.001" value={weightBefore} onChange={e => setWeightBefore(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Weight After (g)</label>
+                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight After (g)</label>
                   <input type="number" step="0.001" value={weightAfter} onChange={e => setWeightAfter(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
                 </div>
               </div>
 
-              <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+              <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
                 <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)]">
-                    Update BOM Recipe List
+                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)] flex items-center gap-1.5">
+                    <Layers className="w-4 h-4" /> Update BOM Recipe List
                   </span>
-                  <button type="button" onClick={handleAddRecipeRow} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 font-semibold">
-                    <Plus className="w-3 h-3" /> Add Material
+                  <button type="button" onClick={handleAddRecipeRow} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 font-semibold cursor-pointer">
+                    <Plus className="w-3.5 h-3.5" /> Add Material
                   </button>
                 </div>
 
-                {recipeInputs.map((row, idx) => (
-                  <div key={idx} className="flex gap-2 items-center">
-                    <select
-                      value={row.raw_material_id}
-                      onChange={e => handleRecipeChange(idx, 'raw_material_id', e.target.value)}
-                      className="input-field flex-1"
-                      required
-                    >
-                      <option value="">-- Select Raw Material --</option>
-                      {rawMaterials.map(rm => (
-                        <option key={rm.id} value={rm.id}>
-                          {rm.name} ({rm.color})
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Qty"
-                      value={row.required_quantity}
-                      onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
-                      className="input-field w-24"
-                      required
-                    />
-                    {recipeInputs.length > 1 && (
-                      <button type="button" onClick={() => handleRemoveRecipeRow(idx)} className="text-red-400 p-2">
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                {recipeInputs.map((row, idx) => {
+                  const selectedMat = rawMaterials.find(rm => rm.id === row.raw_material_id);
+                  return (
+                    <div key={idx} className="bg-[#0b0f19] border border-[var(--color-border)] p-3 rounded-xl space-y-2">
+                      <div className="flex gap-3 items-center">
+                        <div className="flex-1">
+                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                            Raw Material #{idx + 1}
+                          </label>
+                          <select
+                            value={row.raw_material_id}
+                            onChange={e => handleRecipeChange(idx, 'raw_material_id', e.target.value)}
+                            className="input-field w-full text-white font-medium bg-[#131b2e] border-[#263352]"
+                            required
+                          >
+                            <option value="" className="bg-[#131b2e] text-gray-400">-- Select Raw Material --</option>
+                            {rawMaterials.map(rm => (
+                              <option key={rm.id} value={rm.id} className="bg-[#131b2e] text-white">
+                                {rm.name} ({rm.color}) — {rm.packets} pkts ({rm.total_units} units avail)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="w-28">
+                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
+                            Required Qty
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            placeholder="Qty"
+                            value={row.required_quantity}
+                            onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
+                            className="input-field w-full text-center font-bold text-amber-400"
+                            required
+                          />
+                        </div>
+
+                        {recipeInputs.length > 1 && (
+                          <button 
+                            type="button" 
+                            onClick={() => handleRemoveRecipeRow(idx)} 
+                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg mt-4 cursor-pointer"
+                            title="Remove Row"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {selectedMat ? (
+                        <div className="flex items-center justify-between text-xs bg-[#131b2e] px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-300">
+                          <span className="font-semibold flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                            Selected: {selectedMat.name} ({selectedMat.color})
+                          </span>
+                          <span className="text-[11px] text-gray-300">
+                            Available Stock: <strong className="text-amber-400">{selectedMat.total_units}</strong> units ({selectedMat.packets} pkts + {selectedMat.loose_units} loose)
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] text-gray-500 italic pl-1">
+                          Please select a raw material from the dropdown.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <button type="button" onClick={() => setEditModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">Save Changes</button>
+              <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
+                <button type="button" onClick={() => setEditModalOpen(false)} className="btn-secondary w-auto px-5">Cancel</button>
+                <button type="submit" className="btn-primary w-auto px-6">Save Changes</button>
               </div>
             </form>
           </div>

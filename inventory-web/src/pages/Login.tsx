@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase, api } from '../api/client';
 import type { UserRole } from '../types';
-import { Gem, Lock, Mail, Shield, User, ArrowRight, RefreshCw } from 'lucide-react';
+import { Gem, Lock, Mail, Shield, User, ArrowRight, RefreshCw, Zap } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (role: UserRole, email: string, token: string) => void;
@@ -15,6 +15,42 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const handleQuickLogin = async (targetRole: UserRole) => {
+    const targetEmail = targetRole === 'OWNER' ? 'owner_test@example.com' : 'manager_test@example.com';
+    const targetPassword = 'TestPassword123!';
+    
+    setEmail(targetEmail);
+    setPassword(targetPassword);
+    setRole(targetRole);
+    setLoading(true);
+    setErrorMsg(null);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: targetEmail,
+        password: targetPassword
+      });
+
+      if (error) throw error;
+      const token = data.session.access_token;
+      localStorage.setItem('supabase_token', token);
+
+      try {
+        const profileRes = await api.get('/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const userRole = profileRes.data.role as UserRole;
+        onLoginSuccess(userRole, targetEmail, token);
+      } catch {
+        onLoginSuccess(targetRole, targetEmail, token);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Quick login failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +69,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         if (error) throw error;
         if (!data.session) {
-          setErrorMsg('Registration successful! Please check your email to confirm, or log in.');
+          setErrorMsg('Registration successful! Please check your email or use Quick Demo Login below.');
           setIsSignUp(false);
           setLoading(false);
           return;
@@ -65,7 +101,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials or use Quick Demo Login.');
     } finally {
       setLoading(false);
     }
@@ -73,7 +109,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="min-h-screen bg-[var(--color-paper)] flex items-center justify-center p-4">
-      <div className="auth-card-container space-y-6 shadow-2xl">
+      <div className="auth-card-container space-y-6 shadow-2xl w-full max-w-md">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-xl bg-[#0b0f19] border border-[var(--color-border)] flex items-center justify-center mx-auto">
@@ -83,6 +119,34 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <p className="text-xs text-[var(--color-text-muted)]">
             BOM Accounting & Order Calculation System
           </p>
+        </div>
+
+        {/* Quick Demo Login Section */}
+        <div className="bg-[#131b2e] border border-[#233256] rounded-xl p-4 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5 uppercase tracking-wider">
+              <Zap className="w-3.5 h-3.5" /> 1-Click Quick Demo Login
+            </span>
+            <span className="text-[10px] text-gray-400">Pre-seeded Database</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('OWNER')}
+              disabled={loading}
+              className="py-2 px-3 rounded-lg text-xs font-medium bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Shield className="w-3.5 h-3.5" /> Owner Demo
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('MANAGER')}
+              disabled={loading}
+              className="py-2 px-3 rounded-lg text-xs font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+            >
+              <User className="w-3.5 h-3.5" /> Manager Demo
+            </button>
+          </div>
         </div>
 
         {/* Error Alert */}

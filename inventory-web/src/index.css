@@ -57,6 +57,17 @@ body {
   transition: all 0.15s ease;
 }
 
+select.input-field {
+  color: #ffffff !important;
+  background-color: #0b0f19 !important;
+}
+
+select.input-field option {
+  background-color: #131b2e !important;
+  color: #ffffff !important;
+  padding: 8px 12px;
+}
+
 .input-field-icon {
   padding-left: 2.5rem !important;
 }

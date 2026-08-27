@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -15,6 +15,17 @@ export function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('supabase_token'));
   const [userRole, setUserRole] = useState<UserRole>((localStorage.getItem('user_role') as UserRole) || 'MANAGER');
   const [userEmail, setUserEmail] = useState<string>(localStorage.getItem('user_email') || 'user@example.com');
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      setToken(null);
+    };
+
+    window.addEventListener('auth_logout', handleAuthLogout);
+    return () => {
+      window.removeEventListener('auth_logout', handleAuthLogout);
+    };
+  }, []);
 
   const handleLoginSuccess = (role: UserRole, email: string, authToken: string) => {
     setToken(authToken);

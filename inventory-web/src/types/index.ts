@@ -47,12 +47,28 @@ export interface MaterialUsageSnapshot {
   line_cost?: number | null; // Null for Manager
 }
 
+export interface OrderProcessResponse {
+  success: boolean;
+  order_transaction_id?: string;
+  id?: string;
+  sku_id?: string;
+  color?: string;
+  order_quantity?: number;
+  total_order_cost?: number | null;
+  materials_used?: MaterialUsageSnapshot[];
+  materials_summary?: MaterialUsageSnapshot[];
+  error_code?: string;
+  message?: string;
+  shortages?: string[];
+}
+
 export interface OrderTransaction {
   id: string;
   sku_id: string;
   color: string;
   order_quantity: number;
   materials_summary: MaterialUsageSnapshot[];
+  materials_used?: MaterialUsageSnapshot[];
   total_order_cost?: number | null; // Null for Manager
   placed_by_user_id: string;
   placed_by_role: UserRole;

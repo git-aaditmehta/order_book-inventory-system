@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api/client';
-import type { OrderPreviewResponse, OrderTransaction, UserRole } from '../types';
+import type { OrderPreviewResponse, OrderProcessResponse, UserRole } from '../types';
 import { BookOpen, CheckCircle, AlertOctagon, ArrowRight, RefreshCw } from 'lucide-react';
 
 interface OrderBookProps {
@@ -16,7 +16,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   const [loadingProcess, setLoadingProcess] = useState(false);
   
   const [previewData, setPreviewData] = useState<OrderPreviewResponse | null>(null);
-  const [successResult, setSuccessResult] = useState<OrderTransaction | null>(null);
+  const [successResult, setSuccessResult] = useState<OrderProcessResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handlePreview = async (e: React.FormEvent) => {
@@ -168,7 +168,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
               </p>
             </div>
 
-            {userRole === 'OWNER' && previewData.total_order_cost !== null && (
+            {userRole === 'OWNER' && previewData.total_order_cost !== null && previewData.total_order_cost !== undefined && (
               <div className="text-right">
                 <span className="text-xs text-[var(--color-text-muted)] block">Calculated Total Cost</span>
                 <span className="text-xl font-bold text-[var(--color-accent)]">
@@ -260,49 +260,55 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
       )}
 
       {/* Success Transaction Result View */}
-      {successResult && (
-        <div className="bg-[var(--color-success-bg)] border border-[var(--color-success)] rounded-xl p-6 space-y-4 animate-fadeIn">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="w-7 h-7 text-green-400" />
-            <div>
-              <h3 className="font-bold text-lg text-green-300">Order Executed Successfully!</h3>
-              <p className="text-xs text-green-200">
-                Transaction ID: {successResult.id} | SKU: {successResult.sku_id} ({successResult.color}) | Qty: {successResult.order_quantity}
-              </p>
+      {successResult && (() => {
+        const materials = successResult.materials_used || successResult.materials_summary || [];
+        const txId = successResult.order_transaction_id || successResult.id || 'N/A';
+        return (
+          <div className="bg-[var(--color-success-bg)] border border-[var(--color-success)] rounded-xl p-6 space-y-4 animate-fadeIn">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="w-7 h-7 text-green-400" />
+              <div>
+                <h3 className="font-bold text-lg text-green-300">Order Executed Successfully!</h3>
+                <p className="text-xs text-green-200">
+                  Transaction ID: {txId} | SKU: {successResult.sku_id} ({successResult.color}) | Qty: {successResult.order_quantity}
+                </p>
+              </div>
             </div>
-          </div>
 
-          {userRole === 'OWNER' && successResult.total_order_cost !== null && (
-            <div className="bg-black/30 p-3 rounded-lg text-sm flex justify-between items-center">
-              <span>Recorded Order Cost:</span>
-              <span className="font-bold text-green-300">${successResult.total_order_cost?.toFixed(2)}</span>
-            </div>
-          )}
+            {userRole === 'OWNER' && successResult.total_order_cost !== null && successResult.total_order_cost !== undefined && (
+              <div className="bg-black/30 p-3 rounded-lg text-sm flex justify-between items-center">
+                <span>Recorded Order Cost:</span>
+                <span className="font-bold text-green-300">${successResult.total_order_cost?.toFixed(2)}</span>
+              </div>
+            )}
 
-          <div className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-green-200">Raw Material Deductions:</span>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {successResult.materials_summary.map((mat, i) => (
-                <div key={i} className="bg-black/20 p-3 rounded-lg text-xs space-y-1">
-                  <div className="font-bold text-white">{mat.name} ({mat.color})</div>
-                  <div className="text-green-300">Deducted: {mat.units_used} units</div>
-                  <div className="text-[var(--color-text-muted)] flex justify-between">
-                    <span>Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose)</span>
-                    <ArrowRight className="w-3 h-3 self-center" />
-                    <span className="text-white font-semibold">After: {mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</span>
+            <div className="space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-green-200">Raw Material Deductions:</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {materials.map((mat, i) => (
+                  <div key={i} className="bg-black/20 p-3 rounded-lg text-xs space-y-1">
+                    <div className="font-bold text-white">{mat.name} ({mat.color})</div>
+                    <div className="text-green-300">Deducted: {mat.units_used} units</div>
+                    {mat.stock_before && mat.stock_after && (
+                      <div className="text-[var(--color-text-muted)] flex justify-between">
+                        <span>Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose)</span>
+                        <ArrowRight className="w-3 h-3 self-center" />
+                        <span className="text-white font-semibold">After: {mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button onClick={handleReset} className="btn-primary w-full md:w-auto">
+                Place Next Order
+              </button>
             </div>
           </div>
-
-          <div className="pt-2">
-            <button onClick={handleReset} className="btn-primary w-full md:w-auto">
-              Place Next Order
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

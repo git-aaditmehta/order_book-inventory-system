@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import type { RawMaterial, UserRole } from '../types';
 import { 
   Package, Plus, Search, RefreshCw, Edit2, Trash2, 
-  History, X 
+  History, X, ChevronDown, ChevronUp 
 } from 'lucide-react';
 
 interface RawMaterialsProps {
@@ -155,295 +155,339 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
   };
 
   const totalPackets = materials.reduce((acc, m) => acc + m.packets, 0);
-  const totalUnits = materials.reduce((acc, m) => acc + m.total_units, 0);
+  const totalUnits   = materials.reduce((acc, m) => acc + m.total_units, 0);
 
+  /* ────────────────── RENDER ────────────────── */
   return (
-    <div className="space-y-6">
-      {/* Header & Add Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="precision-jewelry-page space-y-6">
+
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Package className="w-6 h-6 text-[var(--color-accent)]" />
-            <span>Raw Materials Inventory</span>
-          </h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            Summary of all uploaded raw materials. Click any card to view transaction history.
+          <h1 className="pj-header-title">Today’s Stock</h1>
+          <p className="pj-header-subtitle">
+            Raw materials inventory · {materials.length} material{materials.length !== 1 ? 's' : ''}
           </p>
         </div>
-
         {userRole === 'OWNER' && (
-          <button onClick={() => { resetForm(); setAddModalOpen(true); }} className="btn-primary">
-            <Plus className="w-4 h-4" /> Add Raw Material
+          <button
+            id="add-raw-material-btn"
+            onClick={() => { resetForm(); setAddModalOpen(true); }}
+            className="pj-btn-add"
+          >
+            <Plus style={{ width: 16, height: 16 }} />
+            Add Material
           </button>
         )}
       </div>
 
-      {/* Summary KPI Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl">
-          <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase">Total Materials</span>
-          <p className="text-2xl font-bold text-white mt-1">{materials.length}</p>
+      {/* ── Summary Metric Cards ── */}
+      <div className="stat-grid">
+        <div className="pj-stat-card">
+          <span className="pj-stat-label">Materials</span>
+          <p className="pj-stat-value">{materials.length}</p>
         </div>
-        <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl">
-          <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase">Total Packets</span>
-          <p className="text-2xl font-bold text-[var(--color-accent)] mt-1">{totalPackets}</p>
+        <div className="pj-stat-card">
+          <span className="pj-stat-label">Total Packets</span>
+          <p className="pj-stat-value pj-stat-value--gold">{totalPackets.toLocaleString()}</p>
         </div>
-        <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl col-span-2 sm:col-span-1">
-          <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase">Total Available Units</span>
-          <p className="text-2xl font-bold text-green-400 mt-1">{totalUnits.toLocaleString()}</p>
-        </div>
-      </div>
-
-      {/* Flexible Search Inputs */}
-      <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-[var(--color-text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search by Material Name..."
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="input-field pl-9"
-          />
-        </div>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-[var(--color-text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search by Color..."
-            value={searchColor}
-            onChange={(e) => setSearchColor(e.target.value)}
-            className="input-field pl-9"
-          />
+        <div className="pj-stat-card">
+          <span className="pj-stat-label">Available Units</span>
+          <p className="pj-stat-value pj-stat-value--green">{totalUnits.toLocaleString()}</p>
         </div>
       </div>
 
-      {/* Raw Material Cards Grid */}
+      {/* ── Search & Filter Controls ── */}
+      <div className="pj-search-box">
+        <div className="search-grid">
+          {/* Name Search */}
+          <div style={{ position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '0.875rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 16,
+              height: 16,
+              color: '#66645F',
+              pointerEvents: 'none',
+            }} />
+            <input
+              id="search-name-input"
+              type="text"
+              placeholder="Search by material name…"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="pj-input"
+            />
+          </div>
+          {/* Color Filter */}
+          <div style={{ position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '0.875rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 16,
+              height: 16,
+              color: '#66645F',
+              pointerEvents: 'none',
+            }} />
+            <input
+              id="search-color-input"
+              type="text"
+              placeholder="Filter by color…"
+              value={searchColor}
+              onChange={(e) => setSearchColor(e.target.value)}
+              className="pj-input"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Material Inventory Grid ── */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 0', gap: '0.75rem' }}>
+          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
+          <span style={{ fontSize: '0.875rem', color: '#66645F' }}>Loading materials ledger…</span>
         </div>
       ) : materials.length === 0 ? (
-        <div className="text-center py-12 bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl">
-          <Package className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-3 opacity-40" />
-          <p className="font-semibold text-lg">No Raw Materials Found</p>
-          <p className="text-sm text-[var(--color-text-muted)]">Upload your raw materials using the Owner controls.</p>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #E4E0D7',
+          borderRadius: '14px',
+          padding: '3rem 1rem',
+          textAlign: 'center',
+        }}>
+          <Package style={{ width: 40, height: 40, color: '#E4E0D7', margin: '0 auto 0.75rem auto' }} />
+          <p style={{ fontWeight: 600, fontSize: '1rem', color: '#171817' }}>No materials found</p>
+          <p style={{ fontSize: '0.875rem', color: '#66645F', marginTop: '0.25rem' }}>
+            {searchName || searchColor
+              ? 'Try adjusting your search or color filter.'
+              : 'Add raw materials to build your inventory recipe database.'}
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="material-grid">
           {materials.map((mat) => (
-            <div
+            <MaterialCard
               key={mat.id}
-              className="bg-[var(--color-paper-card)] border border-[var(--color-border)] hover:border-[var(--color-accent)] transition-all rounded-xl p-5 space-y-4 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start gap-2">
-                  <div>
-                    <h3 className="font-bold text-lg leading-snug">{mat.name}</h3>
-                    <span className="badge-gold mt-1 inline-block">{mat.color}</span>
-                  </div>
-                  {userRole === 'OWNER' && mat.cost_per_unit !== null && (
-                    <div className="text-right">
-                      <span className="text-xs text-[var(--color-text-muted)] block">Unit Cost</span>
-                      <span className="font-bold text-[var(--color-accent)]">${mat.cost_per_unit?.toFixed(2)}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 bg-[var(--color-paper)] p-3 rounded-lg border border-[var(--color-border)] space-y-1.5 text-xs">
-                  <div className="flex justify-between">
-                    <span className="text-[var(--color-text-muted)]">Packets:</span>
-                    <span className="font-bold text-white">{mat.packets} pkts</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--color-text-muted)]">Units / Packet:</span>
-                    <span>{mat.quantity_per_packet}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-[var(--color-text-muted)]">Loose Units:</span>
-                    <span>{mat.loose_units}</span>
-                  </div>
-                  <div className="flex justify-between pt-1.5 border-t border-[var(--color-border)] font-semibold text-sm">
-                    <span className="text-[var(--color-text-muted)]">Total Stock:</span>
-                    <span className="text-green-400">{mat.packets} pkts ({mat.total_units} units) + {mat.loose_units} loose</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-3 border-t border-[var(--color-border)] flex items-center justify-between gap-2">
-                <button
-                  onClick={() => handleOpenHistory(mat)}
-                  className="text-xs text-[var(--color-text-muted)] hover:text-white flex items-center gap-1.5 py-1 px-2.5 rounded hover:bg-[var(--color-paper-card-hover)]"
-                >
-                  <History className="w-3.5 h-3.5" /> History
-                </button>
-
-                {userRole === 'OWNER' && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => { setSelectedMaterial(mat); setRestockModalOpen(true); }}
-                      className="text-xs text-green-400 hover:bg-green-950/40 py-1 px-2.5 rounded font-semibold border border-green-900/40"
-                    >
-                      Restock
-                    </button>
-                    <button onClick={() => openEditModal(mat)} className="p-1.5 text-gray-400 hover:text-white">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(mat)} className="p-1.5 text-red-400 hover:text-red-300">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+              mat={mat}
+              userRole={userRole}
+              onHistory={() => handleOpenHistory(mat)}
+              onRestock={() => { setSelectedMaterial(mat); setRestockModalOpen(true); }}
+              onEdit={() => openEditModal(mat)}
+              onDelete={() => handleDelete(mat)}
+            />
           ))}
         </div>
       )}
 
-      {/* Add Modal (Owner Only) */}
+      {/* ── Add Modal ── */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-md p-6 space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg">Add New Raw Material</h3>
-              <button onClick={() => setAddModalOpen(false)}><X className="w-5 h-5" /></button>
+        <div className="modal-overlay" onClick={() => setAddModalOpen(false)}>
+          <div className="pj-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="pj-modal-header">
+              <h3 className="pj-modal-title">Add Raw Material</h3>
+              <button onClick={() => setAddModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#66645F' }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
-            <form onSubmit={handleAddSubmit} className="space-y-4 text-sm">
+            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Name *</label>
-                <input type="text" placeholder="e.g. 3/5 tilak" value={formName} onChange={e => setFormName(e.target.value)} className="input-field" required />
+                <label className="pj-form-label">Material Name *</label>
+                <input type="text" placeholder="e.g. Emerald Gem Cut" value={formName}
+                  onChange={e => setFormName(e.target.value)} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Color *</label>
-                <input type="text" placeholder="e.g. Red" value={formColor} onChange={e => setFormColor(e.target.value)} className="input-field" required />
+                <label className="pj-form-label">Color *</label>
+                <input type="text" placeholder="e.g. Green" value={formColor}
+                  onChange={e => setFormColor(e.target.value)} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Packets Count</label>
-                  <input type="number" min="0" value={formPackets} onChange={e => setFormPackets(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Packets</label>
+                  <input type="number" min="0" value={formPackets}
+                    onChange={e => setFormPackets(e.target.value ? parseInt(e.target.value) : '')}
+                    className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Qty / Packet</label>
-                  <input type="number" min="1" value={formQtyPerPacket} onChange={e => setFormQtyPerPacket(e.target.value ? parseInt(e.target.value) : '')} className="input-field" required />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Loose Units (Optional)</label>
-                  <input type="number" min="0" value={formLooseUnits} onChange={e => setFormLooseUnits(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Unit Cost ($)</label>
-                  <input type="number" step="0.0001" min="0" value={formCostPerUnit} onChange={e => setFormCostPerUnit(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Qty / Packet *</label>
+                  <input type="number" min="1" value={formQtyPerPacket}
+                    onChange={e => setFormQtyPerPacket(e.target.value ? parseInt(e.target.value) : '')}
+                    className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setAddModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">Create Raw Material</button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="pj-form-label">Loose Units</label>
+                  <input type="number" min="0" value={formLooseUnits}
+                    onChange={e => setFormLooseUnits(e.target.value ? parseInt(e.target.value) : '')}
+                    className="pj-input" style={{ paddingLeft: '0.875rem' }} />
+                </div>
+                <div>
+                  <label className="pj-form-label">Unit Cost ($)</label>
+                  <input type="number" step="0.0001" min="0" value={formCostPerUnit}
+                    onChange={e => setFormCostPerUnit(e.target.value ? parseFloat(e.target.value) : '')}
+                    className="pj-input" style={{ paddingLeft: '0.875rem' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                <button type="button" onClick={() => setAddModalOpen(false)} className="pj-action-btn-ghost" style={{ flex: 1, justifyContent: 'center', height: '42px', border: '1px solid #E4E0D7' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="pj-btn-add" style={{ flex: 2, justifyContent: 'center', height: '42px' }}>
+                  Create Material
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Edit Modal (Owner Only) */}
+      {/* ── Edit Modal ── */}
       {editModalOpen && selectedMaterial && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-md p-6 space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg">Edit Raw Material</h3>
-              <button onClick={() => setEditModalOpen(false)}><X className="w-5 h-5" /></button>
+        <div className="modal-overlay" onClick={() => setEditModalOpen(false)}>
+          <div className="pj-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="pj-modal-header">
+              <h3 className="pj-modal-title">Edit Raw Material</h3>
+              <button onClick={() => setEditModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#66645F' }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
-            <form onSubmit={handleEditSubmit} className="space-y-4 text-sm">
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Name</label>
-                <input type="text" value={formName} onChange={e => setFormName(e.target.value)} className="input-field" required />
+                <label className="pj-form-label">Name</label>
+                <input type="text" value={formName} onChange={e => setFormName(e.target.value)} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Color</label>
-                <input type="text" value={formColor} onChange={e => setFormColor(e.target.value)} className="input-field" required />
+                <label className="pj-form-label">Color</label>
+                <input type="text" value={formColor} onChange={e => setFormColor(e.target.value)} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Packets</label>
-                  <input type="number" min="0" value={formPackets} onChange={e => setFormPackets(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Packets</label>
+                  <input type="number" min="0" value={formPackets} onChange={e => setFormPackets(e.target.value ? parseInt(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Qty / Packet</label>
-                  <input type="number" min="1" value={formQtyPerPacket} onChange={e => setFormQtyPerPacket(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Loose Units</label>
-                  <input type="number" min="0" value={formLooseUnits} onChange={e => setFormLooseUnits(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Unit Cost ($)</label>
-                  <input type="number" step="0.0001" min="0" value={formCostPerUnit} onChange={e => setFormCostPerUnit(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Qty / Packet</label>
+                  <input type="number" min="1" value={formQtyPerPacket} onChange={e => setFormQtyPerPacket(e.target.value ? parseInt(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setEditModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">Save Changes</button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="pj-form-label">Loose Units</label>
+                  <input type="number" min="0" value={formLooseUnits} onChange={e => setFormLooseUnits(e.target.value ? parseInt(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
+                </div>
+                <div>
+                  <label className="pj-form-label">Unit Cost ($)</label>
+                  <input type="number" step="0.0001" min="0" value={formCostPerUnit} onChange={e => setFormCostPerUnit(e.target.value ? parseFloat(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                <button type="button" onClick={() => setEditModalOpen(false)} className="pj-action-btn-ghost" style={{ flex: 1, justifyContent: 'center', height: '42px', border: '1px solid #E4E0D7' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="pj-btn-add" style={{ flex: 2, justifyContent: 'center', height: '42px' }}>
+                  Save Changes
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Restock Modal (Owner Only) */}
+      {/* ── Restock Modal ── */}
       {restockModalOpen && selectedMaterial && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg">Restock: {selectedMaterial.name} ({selectedMaterial.color})</h3>
-              <button onClick={() => setRestockModalOpen(false)}><X className="w-5 h-5" /></button>
+        <div className="modal-overlay" onClick={() => setRestockModalOpen(false)}>
+          <div className="pj-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="pj-modal-header">
+              <div>
+                <h3 className="pj-modal-title">Restock Material</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#66645F', marginTop: 2 }}>
+                  {selectedMaterial.name} ({selectedMaterial.color})
+                </p>
+              </div>
+              <button onClick={() => setRestockModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#66645F' }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
-            <form onSubmit={handleRestockSubmit} className="space-y-4 text-sm">
+
+            <div style={{ backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+              <div className="pj-ledger-row">
+                <span className="pj-ledger-label">Current Packets</span>
+                <span className="pj-ledger-value">{selectedMaterial.packets} pkts</span>
+              </div>
+              <div className="pj-ledger-row">
+                <span className="pj-ledger-label">Loose Units</span>
+                <span className="pj-ledger-value">{selectedMaterial.loose_units}</span>
+              </div>
+              <div className="pj-ledger-row" style={{ borderTop: '1px solid #E4E0D7', marginTop: '0.35rem', paddingTop: '0.35rem' }}>
+                <span className="pj-ledger-label" style={{ fontWeight: 600 }}>Total Available</span>
+                <span className="pj-total-stock-value">{selectedMaterial.total_units.toLocaleString()} units</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleRestockSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Add Packets Count</label>
-                <input type="number" min="0" value={addPackets} onChange={e => setAddPackets(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
+                <label className="pj-form-label">Add Packets Count</label>
+                <input type="number" min="0" value={addPackets} onChange={e => setAddPackets(e.target.value ? parseInt(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} placeholder="0" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1">Add Loose Units</label>
-                <input type="number" min="0" value={addLoose} onChange={e => setAddLoose(e.target.value ? parseInt(e.target.value) : '')} className="input-field" />
+                <label className="pj-form-label">Add Loose Units</label>
+                <input type="number" min="0" value={addLoose} onChange={e => setAddLoose(e.target.value ? parseInt(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} placeholder="0" />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setRestockModalOpen(false)} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary bg-green-600 hover:bg-green-500 text-white">Add Stock</button>
+              <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                <button type="button" onClick={() => setRestockModalOpen(false)} className="pj-action-btn-ghost" style={{ flex: 1, justifyContent: 'center', height: '42px', border: '1px solid #E4E0D7' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="pj-action-btn-restock" style={{ flex: 2, justifyContent: 'center', height: '42px', fontSize: '0.875rem' }}>
+                  Add Stock
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* History Log Modal */}
+      {/* ── History Log Modal ── */}
       {historyModalOpen && selectedMaterial && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-2xl p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
+        <div className="modal-overlay" onClick={() => setHistoryModalOpen(false)}>
+          <div className="pj-modal-box" style={{ maxWidth: '34rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="pj-modal-header">
               <div>
-                <h3 className="font-bold text-lg">Transaction History</h3>
-                <p className="text-xs text-[var(--color-text-muted)]">{selectedMaterial.name} ({selectedMaterial.color})</p>
+                <h3 className="pj-modal-title">Transaction History</h3>
+                <p style={{ fontSize: '0.8125rem', color: '#66645F', marginTop: 2 }}>
+                  {selectedMaterial.name} ({selectedMaterial.color})
+                </p>
               </div>
-              <button onClick={() => setHistoryModalOpen(false)}><X className="w-5 h-5" /></button>
+              <button onClick={() => setHistoryModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#66645F' }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
+
             {historyLogs.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)] text-center py-6">No order transactions recorded for this raw material yet.</p>
+              <p style={{ fontSize: '0.875rem', color: '#66645F', textAlign: 'center', padding: '2rem 0' }}>
+                No order transactions recorded for this material yet.
+              </p>
             ) : (
-              <div className="space-y-3">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '360px', overflowY: 'auto' }}>
                 {historyLogs.map((log, idx) => (
-                  <div key={idx} className="bg-[var(--color-paper)] p-3.5 rounded-lg border border-[var(--color-border)] text-xs space-y-1">
-                    <div className="flex justify-between font-semibold">
+                  <div key={idx} style={{ backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem 1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '0.8125rem', fontWeight: 600 }}>
                       <span>Order SKU: {log.sku_id} ({log.color})</span>
-                      <span className="text-[var(--color-text-muted)]">{new Date(log.created_at).toLocaleString()}</span>
+                      <span style={{ color: '#66645F', fontWeight: 400, fontSize: '0.75rem' }}>
+                        {new Date(log.created_at).toLocaleString()}
+                      </span>
                     </div>
-                    <div className="flex justify-between text-[var(--color-accent)] font-semibold">
-                      <span>Deducted: {log.units_used} units</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.25rem', fontSize: '0.8125rem' }}>
+                      <span style={{ color: '#9B5757', fontFamily: 'var(--pj-font-mono)', fontWeight: 600 }}>
+                        −{log.units_used} units
+                      </span>
                       {userRole === 'OWNER' && log.line_cost !== null && (
-                        <span>Cost: ${log.line_cost?.toFixed(2)}</span>
+                        <span style={{ color: '#806B3F', fontFamily: 'var(--pj-font-mono)', fontWeight: 600 }}>
+                          ${log.line_cost?.toFixed(2)}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -456,3 +500,153 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
     </div>
   );
 };
+
+/* ─── Material Card Sub-Component ─── */
+
+interface MaterialCardProps {
+  mat: RawMaterial;
+  userRole: UserRole;
+  onHistory: () => void;
+  onRestock: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const MaterialCard: React.FC<MaterialCardProps> = ({ mat, userRole, onHistory, onRestock, onEdit, onDelete }) => {
+  const [expanded, setExpanded] = useState(false);
+  const gem = getGemColor(mat.color);
+
+  return (
+    <article 
+      className={`pj-material-card ${expanded ? 'pj-material-card--expanded' : 'pj-material-card--compact'}`}
+      style={{ cursor: 'pointer' }}
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* Top Header: Always Visible (Name, Color Swatch, Unit Cost, Quick Stock & Expand Icon) */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 className="pj-material-name">{mat.name}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+            <div className="pj-color-indicator" style={{ marginTop: 0 }}>
+              <span
+                className="pj-color-dot"
+                style={{
+                  backgroundColor: gem.bg,
+                  border: gem.border ? `1px solid ${gem.border}` : 'none'
+                }}
+              />
+              <span>{mat.color}</span>
+            </div>
+            {/* Quick stock pill visible when collapsed */}
+            {!expanded && (
+              <span style={{ fontSize: '0.75rem', fontFamily: 'var(--pj-font-mono)', fontWeight: 600, color: '#496B58' }}>
+                · {mat.total_units.toLocaleString()} units ({mat.packets} pkts)
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          {userRole === 'OWNER' && mat.cost_per_unit !== null && (
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.625rem', color: '#52504B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Unit Cost
+              </span>
+              <span className="pj-unit-cost">${mat.cost_per_unit?.toFixed(2)}</span>
+            </div>
+          )}
+          <button
+            type="button"
+            aria-label={expanded ? "Collapse details" : "Expand details"}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#52504B',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {expanded ? <ChevronUp style={{ width: 16, height: 16 }} /> : <ChevronDown style={{ width: 16, height: 16 }} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Details Body */}
+      {expanded && (
+        <div 
+          className="animate-fadeIn" 
+          style={{ marginTop: '0.75rem' }} 
+          onClick={(e) => e.stopPropagation()}
+        >
+          <hr className="pj-divider" />
+
+          {/* Stock Ledger Grid */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+            <div className="pj-ledger-row">
+              <span className="pj-ledger-label">Packets</span>
+              <span className="pj-ledger-value">{mat.packets} pkts</span>
+            </div>
+            <div className="pj-ledger-row">
+              <span className="pj-ledger-label">Units / Packet</span>
+              <span className="pj-ledger-value">{mat.quantity_per_packet}</span>
+            </div>
+            <div className="pj-ledger-row">
+              <span className="pj-ledger-label">Loose Units</span>
+              <span className="pj-ledger-value">{mat.loose_units}</span>
+            </div>
+          </div>
+
+          <hr className="pj-divider" />
+
+          {/* Total Stock Summary */}
+          <div>
+            <div className="pj-total-stock-label">Total Stock</div>
+            <div className="pj-total-stock-value">
+              {mat.packets} pkts · {mat.total_units.toLocaleString()} units
+              {mat.loose_units > 0 ? ` + ${mat.loose_units} loose` : ''}
+            </div>
+          </div>
+
+          <hr className="pj-divider" />
+
+          {/* Action Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <button onClick={onHistory} className="pj-action-btn-ghost" aria-label={`History for ${mat.name}`}>
+              <History style={{ width: 14, height: 14 }} /> History
+            </button>
+
+            {userRole === 'OWNER' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <button onClick={onRestock} className="pj-action-btn-restock" aria-label={`Restock ${mat.name}`}>
+                  Restock
+                </button>
+                <button onClick={onEdit} className="pj-action-btn-ghost" title="Edit Material" aria-label={`Edit ${mat.name}`}>
+                  <Edit2 style={{ width: 14, height: 14 }} />
+                </button>
+                <button onClick={onDelete} className="pj-action-btn-danger" title="Archive Material" aria-label={`Archive ${mat.name}`}>
+                  <Trash2 style={{ width: 14, height: 14 }} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </article>
+  );
+};
+
+/* ─── Helper: Refined Gemstone Color Dot ─── */
+function getGemColor(colorName: string): { bg: string; border?: string } {
+  const c = colorName.toLowerCase();
+  if (c.includes('green') || c.includes('emerald') || c.includes('jade')) return { bg: '#496B58' };
+  if (c.includes('red') || c.includes('ruby') || c.includes('garnet') || c.includes('rose')) return { bg: '#9B5757' };
+  if (c.includes('gold') || c.includes('yellow') || c.includes('amber')) return { bg: '#A88A52' };
+  if (c.includes('silver') || c.includes('platinum') || c.includes('steel') || c.includes('gray')) return { bg: '#94A3B8' };
+  if (c.includes('pearl') || c.includes('white') || c.includes('ivory')) return { bg: '#FFFFFF', border: '#CBD5E1' };
+  if (c.includes('black') || c.includes('onyx') || c.includes('dark')) return { bg: '#171817' };
+  if (c.includes('blue') || c.includes('sapphire')) return { bg: '#3B82F6' };
+  return { bg: '#A88A52' };
+}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { OrderTransaction, UserRole } from '../types';
-import { History, Search, RefreshCw, Layers } from 'lucide-react';
+import { History, Search, RefreshCw, Layers, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface OrderHistoryProps {
   userRole: UserRole;
@@ -29,95 +29,147 @@ export const OrderHistory: React.FC<OrderHistoryProps> = ({ userRole }) => {
   }, [searchSku]);
 
   return (
-    <div className="space-y-6">
+    <div className="precision-jewelry-page space-y-6">
+      {/* ── Page Header ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <History className="w-6 h-6 text-[var(--color-accent)]" />
-          <span>Order Transaction History</span>
-        </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Complete audit trail of all placed orders and raw material stock deductions.
+        <h1 className="pj-header-title">Order Transaction History</h1>
+        <p className="pj-header-subtitle">
+          Audit log · Complete history of placed orders, user roles, and raw material deductions
         </p>
       </div>
 
-      <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl">
-        <div className="relative max-w-md">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-[var(--color-text-muted)]" />
+      {/* ── Search Bar ── */}
+      <div className="pj-search-box">
+        <div style={{ position: 'relative', maxWidth: '28rem' }}>
+          <Search style={{
+            position: 'absolute',
+            left: '0.875rem',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: 16,
+            height: 16,
+            color: '#52504B',
+            pointerEvents: 'none',
+          }} />
           <input
             type="text"
-            placeholder="Filter by SKU ID..."
+            placeholder="Filter by SKU ID (e.g. J-101)…"
             value={searchSku}
             onChange={(e) => setSearchSku(e.target.value)}
-            className="input-field pl-9"
+            className="pj-input"
           />
         </div>
       </div>
 
+      {/* ── Transactions List ── */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 0', gap: '0.75rem' }}>
+          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
+          <span style={{ fontSize: '0.875rem', color: '#52504B' }}>Loading audit history…</span>
         </div>
       ) : transactions.length === 0 ? (
-        <div className="text-center py-12 bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl">
-          <History className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-3 opacity-40" />
-          <p className="font-semibold text-lg">No Order Transactions Found</p>
-          <p className="text-sm text-[var(--color-text-muted)]">Placed orders will be recorded here.</p>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #CCC5B6',
+          borderRadius: '14px',
+          padding: '3rem 1rem',
+          textAlign: 'center',
+        }}>
+          <History style={{ width: 40, height: 40, color: '#CCC5B6', margin: '0 auto 0.75rem auto' }} />
+          <p style={{ fontWeight: 600, fontSize: '1rem', color: '#171817' }}>No Order Transactions Found</p>
+          <p style={{ fontSize: '0.875rem', color: '#52504B', marginTop: '0.25rem' }}>
+            Placed orders will automatically be recorded here.
+          </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {transactions.map((tx) => (
-            <div
-              key={tx.id}
-              className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl p-5 space-y-4"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[var(--color-border)] gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-lg">{tx.sku_id}</span>
-                    <span className="badge-gold">{tx.color}</span>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                    Order Quantity: <span className="text-white font-semibold">{tx.order_quantity}</span> | Placed by: <span className="uppercase text-[var(--color-accent)]">{tx.placed_by_role}</span>
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-xs text-[var(--color-text-muted)] block">{new Date(tx.created_at).toLocaleString()}</span>
-                  {userRole === 'OWNER' && tx.total_order_cost !== null && (
-                    <span className="text-base font-bold text-[var(--color-accent)]">
-                      Total Cost: ${tx.total_order_cost?.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Deducted Raw Materials Breakdown */}
-              <div className="space-y-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1">
-                  <Layers className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Materials Deducted:
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {tx.materials_summary.map((mat, idx) => (
-                    <div key={idx} className="bg-[var(--color-paper)] p-3 rounded-lg border border-[var(--color-border)] text-xs space-y-1">
-                      <div className="font-semibold text-white">{mat.name} ({mat.color})</div>
-                      <div className="text-[var(--color-accent)] font-bold">Deducted: {mat.units_used} units</div>
-                      <div className="text-[var(--color-text-muted)] text-[11px] pt-1 border-t border-[var(--color-border)]">
-                        Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose) <br />
-                        After: <span className="text-white font-medium">{mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</span>
-                      </div>
-                      {userRole === 'OWNER' && mat.line_cost !== null && (
-                        <div className="text-right text-[11px] font-semibold text-green-400">
-                          Cost: ${mat.line_cost?.toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <TransactionCard key={tx.id} tx={tx} userRole={userRole} />
           ))}
         </div>
       )}
     </div>
+  );
+};
+
+/* ─── Compact Expandable Transaction Card ─── */
+
+interface TransactionCardProps {
+  tx: OrderTransaction;
+  userRole: UserRole;
+}
+
+const TransactionCard: React.FC<TransactionCardProps> = ({ tx, userRole }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <article
+      className="pj-material-card"
+      style={{ cursor: 'pointer', padding: '1rem 1.25rem' }}
+      onClick={() => setExpanded(!expanded)}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#171817', margin: 0 }}>
+              {tx.sku_id}
+            </h3>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', color: '#171817', padding: '0.1rem 0.5rem', borderRadius: '4px' }}>
+              {tx.color}
+            </span>
+          </div>
+          <span style={{ fontSize: '0.8125rem', color: '#52504B', display: 'block', marginTop: '0.25rem' }}>
+            Order Qty: <strong>{tx.order_quantity} units</strong> · Placed by: <strong style={{ textTransform: 'uppercase', color: '#7A6438' }}>{tx.placed_by_role}</strong>
+          </span>
+        </div>
+
+        <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#52504B', display: 'block' }}>
+              {new Date(tx.created_at).toLocaleString()}
+            </span>
+            {userRole === 'OWNER' && tx.total_order_cost !== null && (
+              <span className="pj-unit-cost" style={{ fontSize: '1.125rem' }}>
+                ${tx.total_order_cost?.toFixed(2)}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#52504B', padding: '0.25rem' }}
+          >
+            {expanded ? <ChevronUp style={{ width: 16, height: 16 }} /> : <ChevronDown style={{ width: 16, height: 16 }} />}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="animate-fadeIn" style={{ marginTop: '0.75rem' }} onClick={(e) => e.stopPropagation()}>
+          <hr className="pj-divider" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#806B3F', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <Layers style={{ width: 13, height: 13 }} /> Materials Deducted:
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+              {tx.materials_summary.map((mat, idx) => (
+                <div key={idx} style={{ backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.625rem 0.75rem', fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                  <div style={{ fontWeight: 700, color: '#171817' }}>{mat.name} ({mat.color})</div>
+                  <div style={{ color: '#496B58', fontWeight: 700 }}>Deducted: {mat.units_used} units</div>
+                  <div style={{ fontSize: '0.75rem', color: '#52504B', borderTop: '1px solid #CCC5B6', paddingTop: '0.25rem', marginTop: '0.25rem' }}>
+                    Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose) <br />
+                    After: <strong>{mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</strong>
+                  </div>
+                  {userRole === 'OWNER' && mat.line_cost !== null && (
+                    <div style={{ textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#7A6438' }}>
+                      Cost: ${mat.line_cost?.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+    </article>
   );
 };

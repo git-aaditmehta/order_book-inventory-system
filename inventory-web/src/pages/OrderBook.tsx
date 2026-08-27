@@ -77,101 +77,111 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Title & Description */}
+    <div className="precision-jewelry-page space-y-6">
+      {/* ── Page Header ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <BookOpen className="w-6 h-6 text-[var(--color-accent)]" />
-          <span>Order Book Ledger</span>
-        </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Daily accounting entry. Enter Jewelry SKU & Color to calculate raw material deductions.
+        <h1 className="pj-header-title">Order Book Ledger</h1>
+        <p className="pj-header-subtitle">
+          Daily accounting entry · Enter Jewelry SKU & Color to calculate raw material deductions
         </p>
       </div>
 
-      {/* Input Form Card */}
-      <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl p-5 md:p-6 shadow-sm">
-        <form onSubmit={handlePreview} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+      {/* ── Input Form Card ── */}
+      <div className="pj-stat-card" style={{ padding: '1.25rem' }}>
+        <form onSubmit={handlePreview} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', alignItems: 'flex-end' }}>
           <div>
-            <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-              SKU ID *
-            </label>
+            <label className="pj-form-label">SKU ID *</label>
             <input
               type="text"
               placeholder="e.g. J-101"
               value={skuId}
               onChange={(e) => setSkuId(e.target.value)}
-              className="input-field"
+              className="pj-input"
+              style={{ paddingLeft: '0.875rem' }}
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-              Color *
-            </label>
+            <label className="pj-form-label">Color *</label>
             <input
               type="text"
               placeholder="e.g. Rose Gold"
               value={color}
               onChange={(e) => setColor(e.target.value)}
-              className="input-field"
+              className="pj-input"
+              style={{ paddingLeft: '0.875rem' }}
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-2">
-              Order Quantity *
-            </label>
+            <label className="pj-form-label">Order Quantity *</label>
             <input
               type="number"
               min="1"
               value={orderQuantity}
               onChange={(e) => setOrderQuantity(e.target.value ? parseInt(e.target.value) : '')}
-              className="input-field"
+              className="pj-input"
+              style={{ paddingLeft: '0.875rem', fontWeight: 700 }}
               required
             />
           </div>
 
-          <div className="flex gap-2">
+          <div>
             <button
               type="submit"
               disabled={loadingPreview}
-              className="btn-primary flex-1"
+              className="pj-btn-add"
+              style={{ width: '100%', justifyContent: 'center', height: '44px' }}
             >
-              {loadingPreview ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Check Stock & Preview'}
+              {loadingPreview ? <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" /> : 'Check Stock & Preview'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Error / Warning Alert */}
+      {/* ── Error / Warning Alert ── */}
       {errorMessage && (
-        <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger)] text-red-300 p-4 rounded-xl flex items-start gap-3">
-          <AlertOctagon className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-          <div className="text-sm">
-            <p className="font-semibold">{errorMessage}</p>
-          </div>
+        <div style={{
+          backgroundColor: '#F5E3E3',
+          border: '1px solid #9B5757',
+          color: '#9B5757',
+          padding: '1rem',
+          borderRadius: '10px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.75rem',
+          fontSize: '0.875rem',
+          fontWeight: 600
+        }}>
+          <AlertOctagon style={{ width: 20, height: 20, flexShrink: 0 }} />
+          <span>{errorMessage}</span>
         </div>
       )}
 
-      {/* Stock Deduction Preview Card */}
+      {/* ── Stock Deduction Preview Card ── */}
       {previewData && (
-        <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl p-6 space-y-6 animate-fadeIn">
-          <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-[var(--color-border)] gap-4">
+        <div className="pj-stat-card animate-fadeIn" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #CCC5B6', paddingBottom: '0.75rem', gap: '1rem' }}>
             <div>
-              <span className="text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">Jewelry Selected</span>
-              <h2 className="text-xl font-bold">{previewData.jewelry.sku_id} — {previewData.jewelry.color}</h2>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Order Quantity: {previewData.order_quantity} units | Weights: {previewData.jewelry.weight_before}g / {previewData.jewelry.weight_after}g
-              </p>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#A88A52' }}>
+                Jewelry Selected
+              </span>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#171817', margin: '0.1rem 0' }}>
+                {previewData.jewelry.sku_id} — {previewData.jewelry.color}
+              </h2>
+              <span style={{ fontSize: '0.8125rem', color: '#52504B' }}>
+                Order Qty: <strong>{previewData.order_quantity} units</strong> · Weights: {previewData.jewelry.weight_before}g / {previewData.jewelry.weight_after}g
+              </span>
             </div>
 
             {userRole === 'OWNER' && previewData.total_order_cost !== null && previewData.total_order_cost !== undefined && (
-              <div className="text-right">
-                <span className="text-xs text-[var(--color-text-muted)] block">Calculated Total Cost</span>
-                <span className="text-xl font-bold text-[var(--color-accent)]">
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.6875rem', color: '#52504B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Calculated Order Cost
+                </span>
+                <span className="pj-unit-cost" style={{ fontSize: '1.35rem' }}>
                   ${previewData.total_order_cost?.toFixed(2)}
                 </span>
               </div>
@@ -180,60 +190,69 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
 
           {/* Insufficient Alert */}
           {!previewData.is_executable && (
-            <div className="bg-[var(--color-danger-bg)] border border-[var(--color-danger)] text-red-200 p-4 rounded-lg space-y-2">
-              <div className="flex items-center gap-2 font-bold text-sm text-red-400">
-                <AlertOctagon className="w-5 h-5" />
+            <div style={{
+              backgroundColor: '#F5E3E3',
+              border: '1px solid #9B5757',
+              color: '#9B5757',
+              padding: '1rem',
+              borderRadius: '8px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              fontSize: '0.8125rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.875rem' }}>
+                <AlertOctagon style={{ width: 18, height: 18 }} />
                 <span>ORDER BLOCKED: Insufficient Raw Material Stock</span>
               </div>
-              <ul className="list-disc list-inside text-xs space-y-1">
+              <ul style={{ listStyleType: 'disc', paddingLeft: '1.25rem', margin: 0 }}>
                 {previewData.shortages.map((s, idx) => (
                   <li key={idx}>{s}</li>
                 ))}
               </ul>
-              <p className="text-xs italic mt-2 text-red-300">
+              <span style={{ fontStyle: 'italic', marginTop: '0.25rem' }}>
                 Please restock the required raw materials in the Raw Materials section before placing this order.
-              </p>
+              </span>
             </div>
           )}
 
           {/* Raw Materials Required Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
               <thead>
-                <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-text-muted)] uppercase">
-                  <th className="py-3 px-2">Raw Material</th>
-                  <th className="py-3 px-2 text-center">Required Units</th>
-                  <th className="py-3 px-2 text-center">Current Stock</th>
-                  <th className="py-3 px-2 text-center">Stock Status</th>
-                  {userRole === 'OWNER' && <th className="py-3 px-2 text-right">Line Cost</th>}
+                <tr style={{ borderBottom: '1px solid #CCC5B6', fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#52504B' }}>
+                  <th style={{ padding: '0.625rem 0.5rem' }}>Raw Material</th>
+                  <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Required Units</th>
+                  <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Current Stock</th>
+                  <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Stock Status</th>
+                  {userRole === 'OWNER' && <th style={{ padding: '0.625rem 0.5rem', textAlign: 'right' }}>Line Cost</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-border)]">
+              <tbody>
                 {previewData.materials_required.map((mat) => (
-                  <tr key={mat.raw_material_id} className="hover:bg-[var(--color-paper-card-hover)]">
-                    <td className="py-3 px-2 font-medium">
-                      <div className="font-semibold">{mat.name}</div>
-                      <div className="text-xs text-[var(--color-text-muted)]">{mat.color}</div>
+                  <tr key={mat.raw_material_id} style={{ borderBottom: '1px solid #CCC5B6' }}>
+                    <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: '#171817' }}>
+                      {mat.name} <span style={{ fontWeight: 400, color: '#52504B' }}>({mat.color})</span>
                     </td>
-                    <td className="py-3 px-2 text-center font-bold text-[var(--color-accent)]">
+                    <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#496B58' }}>
                       {mat.units_required} units
                     </td>
-                    <td className="py-3 px-2 text-center text-xs">
+                    <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', color: '#52504B' }}>
                       {Math.floor(mat.total_available / mat.quantity_per_packet)} pkts ({mat.total_available % mat.quantity_per_packet} loose)
                     </td>
-                    <td className="py-3 px-2 text-center">
+                    <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>
                       {mat.is_sufficient ? (
-                        <span className="inline-flex items-center gap-1 text-xs text-green-400 font-semibold bg-green-950/40 px-2 py-1 rounded">
-                          <CheckCircle className="w-3.5 h-3.5" /> Sufficient
+                        <span style={{ backgroundColor: '#DFE8E3', color: '#496B58', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <CheckCircle style={{ width: 12, height: 12 }} /> Sufficient
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs text-red-400 font-semibold bg-red-950/40 px-2 py-1 rounded">
-                          <AlertOctagon className="w-3.5 h-3.5" /> Shortage
+                        <span style={{ backgroundColor: '#F5E3E3', color: '#9B5757', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <AlertOctagon style={{ width: 12, height: 12 }} /> Shortage
                         </span>
                       )}
                     </td>
                     {userRole === 'OWNER' && (
-                      <td className="py-3 px-2 text-right font-medium">
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#7A6438' }}>
                         ${mat.line_cost?.toFixed(2)}
                       </td>
                     )}
@@ -243,57 +262,60 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
             </table>
           </div>
 
-          {/* Execution Actions */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-[var(--color-border)]">
-            <button onClick={handleReset} className="btn-secondary">
+          {/* Actions */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', borderTop: '1px solid #CCC5B6', paddingTop: '0.75rem' }}>
+            <button onClick={handleReset} className="pj-action-btn-ghost" style={{ border: '1px solid #CCC5B6', padding: '0.5rem 1rem' }}>
               Cancel
             </button>
             <button
               onClick={handleProcessOrder}
               disabled={!previewData.is_executable || loadingProcess}
-              className="btn-primary bg-green-600 hover:bg-green-500 text-white"
+              className="pj-action-btn-restock"
+              style={{ opacity: !previewData.is_executable ? 0.5 : 1, cursor: !previewData.is_executable ? 'not-allowed' : 'pointer', padding: '0.5rem 1.25rem', fontSize: '0.875rem' }}
             >
-              {loadingProcess ? <RefreshCw className="w-4 h-4 animate-spin" /> : 'Confirm & Deduct Stock'}
+              {loadingProcess ? <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" /> : 'Confirm & Deduct Stock'}
             </button>
           </div>
         </div>
       )}
 
-      {/* Success Transaction Result View */}
+      {/* ── Success Result View ── */}
       {successResult && (() => {
         const materials = successResult.materials_used || successResult.materials_summary || [];
         const txId = successResult.order_transaction_id || successResult.id || 'N/A';
         return (
-          <div className="bg-[var(--color-success-bg)] border border-[var(--color-success)] rounded-xl p-6 space-y-4 animate-fadeIn">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-7 h-7 text-green-400" />
+          <div className="pj-stat-card animate-fadeIn" style={{ padding: '1.5rem', borderLeft: '4px solid #496B58', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <CheckCircle style={{ width: 28, height: 28, color: '#496B58' }} />
               <div>
-                <h3 className="font-bold text-lg text-green-300">Order Executed Successfully!</h3>
-                <p className="text-xs text-green-200">
-                  Transaction ID: {txId} | SKU: {successResult.sku_id} ({successResult.color}) | Qty: {successResult.order_quantity}
-                </p>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#496B58' }}>Order Executed Successfully!</h3>
+                <span style={{ fontSize: '0.8125rem', color: '#52504B' }}>
+                  Transaction ID: <strong>{txId}</strong> | SKU: <strong>{successResult.sku_id} ({successResult.color})</strong> | Qty: <strong>{successResult.order_quantity}</strong>
+                </span>
               </div>
             </div>
 
             {userRole === 'OWNER' && successResult.total_order_cost !== null && successResult.total_order_cost !== undefined && (
-              <div className="bg-black/30 p-3 rounded-lg text-sm flex justify-between items-center">
-                <span>Recorded Order Cost:</span>
-                <span className="font-bold text-green-300">${successResult.total_order_cost?.toFixed(2)}</span>
+              <div style={{ backgroundColor: '#E0D9CB', padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', border: '1px solid #CCC5B6' }}>
+                <span style={{ fontWeight: 600, color: '#52504B' }}>Recorded Order Cost:</span>
+                <span className="pj-unit-cost" style={{ fontSize: '1.125rem' }}>${successResult.total_order_cost?.toFixed(2)}</span>
               </div>
             )}
 
-            <div className="space-y-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-green-200">Raw Material Deductions:</span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#52504B' }}>
+                Raw Material Deductions:
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
                 {materials.map((mat, i) => (
-                  <div key={i} className="bg-black/20 p-3 rounded-lg text-xs space-y-1">
-                    <div className="font-bold text-white">{mat.name} ({mat.color})</div>
-                    <div className="text-green-300">Deducted: {mat.units_used} units</div>
+                  <div key={i} style={{ backgroundColor: '#FFFFFF', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                    <div style={{ fontWeight: 700, color: '#171817' }}>{mat.name} ({mat.color})</div>
+                    <div style={{ color: '#496B58', fontWeight: 700 }}>Deducted: {mat.units_used} units</div>
                     {mat.stock_before && mat.stock_after && (
-                      <div className="text-[var(--color-text-muted)] flex justify-between">
-                        <span>Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose)</span>
-                        <ArrowRight className="w-3 h-3 self-center" />
-                        <span className="text-white font-semibold">After: {mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</span>
+                      <div style={{ fontSize: '0.75rem', color: '#52504B', borderTop: '1px solid #CCC5B6', paddingTop: '0.25rem', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span>Before: {mat.stock_before.packets} pkts</span>
+                        <ArrowRight style={{ width: 12, height: 12 }} />
+                        <span style={{ fontWeight: 700, color: '#171817' }}>After: {mat.stock_after.packets} pkts</span>
                       </div>
                     )}
                   </div>
@@ -301,8 +323,8 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
               </div>
             </div>
 
-            <div className="pt-2">
-              <button onClick={handleReset} className="btn-primary w-full md:w-auto">
+            <div style={{ paddingTop: '0.5rem' }}>
+              <button onClick={handleReset} className="pj-btn-add">
                 Place Next Order
               </button>
             </div>

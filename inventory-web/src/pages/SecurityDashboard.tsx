@@ -28,63 +28,70 @@ export const SecurityDashboard: React.FC<SecurityProps> = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="precision-jewelry-page space-y-6">
+      {/* ── Page Header ── */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-          <Shield className="w-6 h-6 text-[var(--color-accent)]" />
-          <span>Owner Security & Active Sessions</span>
+        <h1 className="pj-header-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Shield style={{ width: 24, height: 24, color: '#A88A52' }} /> Owner Security & Active Sessions
         </h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">
-          Monitor active user logins, IP addresses, and device connections.
+        <p className="pj-header-subtitle">
+          Security audit · Monitor active user logins, IP addresses, and device connections
         </p>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 0', gap: '0.75rem' }}>
+          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
+          <span style={{ fontSize: '0.875rem', color: '#52504B' }}>Loading security telemetry…</span>
         </div>
       ) : sessionData && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-5 rounded-xl flex items-center gap-4">
-              <Globe className="w-8 h-8 text-[var(--color-accent)]" />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+            <div className="pj-stat-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+              <Globe style={{ width: 32, height: 32, color: '#A88A52', flexShrink: 0 }} />
               <div>
-                <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase">Current Request IP</span>
-                <p className="text-xl font-bold text-white mt-0.5">{sessionData.current_request_ip}</p>
+                <span className="pj-stat-label">Current Request IP</span>
+                <p className="pj-stat-number" style={{ fontSize: '1.35rem', marginTop: '0.1rem' }}>
+                  {sessionData.current_request_ip}
+                </p>
               </div>
             </div>
 
-            <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-5 rounded-xl flex items-center gap-4">
-              <Smartphone className="w-8 h-8 text-green-400" />
+            <div className="pj-stat-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
+              <Smartphone style={{ width: 32, height: 32, color: '#496B58', flexShrink: 0 }} />
               <div>
-                <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase">Client Device Info</span>
-                <p className="text-xs text-gray-300 mt-0.5 truncate max-w-xs">{sessionData.current_device}</p>
+                <span className="pj-stat-label">Client Device Info</span>
+                <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#171817', marginTop: '0.2rem' }}>
+                  {sessionData.current_device}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Active Sessions List */}
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-6 rounded-xl space-y-4">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Key className="w-5 h-5 text-[var(--color-accent)]" /> Logged In User Sessions
+          <div className="pj-stat-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Key style={{ width: 18, height: 18, color: '#A88A52' }} /> Logged In User Sessions
             </h3>
 
-            <div className="space-y-3">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {sessionData.active_sessions.map((sess: any, idx: number) => (
-                <div key={idx} className="bg-[var(--color-paper)] p-4 rounded-lg border border-[var(--color-border)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <div key={idx} style={{ backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.875rem 1rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', fontSize: '0.8125rem' }}>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white text-sm">{sess.email}</span>
-                      <span className="badge-gold">{sess.role}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontWeight: 700, color: '#171817', fontSize: '0.875rem' }}>{sess.email}</span>
+                      <span style={{ backgroundColor: '#171817', color: '#FFFFFF', fontSize: '0.6875rem', fontWeight: 700, padding: '0.1rem 0.5rem', borderRadius: '4px' }}>
+                        {sess.role}
+                      </span>
                     </div>
-                    <p className="text-[var(--color-text-muted)] mt-1">IP Address: {sess.ip_address} | Device: {sess.device}</p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-green-400 font-semibold bg-green-950/40 px-2.5 py-1 rounded">
-                      ● Active Now
+                    <span style={{ color: '#52504B', fontSize: '0.75rem', display: 'block', marginTop: '0.2rem' }}>
+                      IP Address: {sess.ip_address} | Device: {sess.device}
                     </span>
                   </div>
+
+                  <span style={{ backgroundColor: '#DFE8E3', color: '#496B58', fontWeight: 700, padding: '0.25rem 0.625rem', borderRadius: '4px', fontSize: '0.75rem' }}>
+                    ● Active Session
+                  </span>
                 </div>
               ))}
             </div>

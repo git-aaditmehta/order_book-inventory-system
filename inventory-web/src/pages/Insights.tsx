@@ -46,7 +46,7 @@ export const Insights: React.FC<InsightsProps> = () => {
     // Header Title
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
-    doc.setTextColor(212, 175, 55); // Gold tone
+    doc.setTextColor(168, 138, 82); // Champagne Gold
     doc.text('Luxe Craft Inventory Summary Report', 14, 20);
 
     doc.setFontSize(10);
@@ -99,129 +99,146 @@ export const Insights: React.FC<InsightsProps> = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="precision-jewelry-page space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-[var(--color-accent)]" />
-            <span>Insights & Financial Analytics</span>
-          </h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            Owner exclusive financial summary, raw material consumption, and PDF report export.
+          <h1 className="pj-header-title">Insights & Financial Analytics</h1>
+          <p className="pj-header-subtitle">
+            Owner exclusive analytics · Recorded order cost, raw material consumption, and PDF report export
           </p>
         </div>
 
-        <button onClick={handleExportPDF} disabled={!summary} className="btn-primary">
-          <Download className="w-4 h-4" /> Download PDF Report
+        <button onClick={handleExportPDF} disabled={!summary} className="pj-btn-add">
+          <Download style={{ width: 16, height: 16 }} /> Download PDF Report
         </button>
       </div>
 
-      {/* Period Filter Bar */}
-      <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-[var(--color-accent)]" />
-          <span className="text-sm font-semibold">Select Timeframe:</span>
-          <div className="flex bg-[var(--color-paper)] p-1 rounded-lg border border-[var(--color-border)]">
-            {(['7d', '30d', 'custom'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
-                  period === p ? 'bg-[var(--color-accent)] text-[var(--color-accent-text)]' : 'text-[var(--color-text-muted)]'
-                }`}
-              >
-                {p === '7d' ? 'Past 7 Days' : p === '30d' ? 'Past 30 Days' : 'Custom Range'}
-              </button>
-            ))}
+      {/* ── Period Filter Bar ── */}
+      <div className="pj-search-box">
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Calendar style={{ width: 18, height: 18, color: '#A88A52' }} />
+            <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#171817' }}>Select Timeframe:</span>
+            <div style={{ display: 'flex', backgroundColor: '#E0D9CB', padding: '0.25rem', borderRadius: '8px', border: '1px solid #CCC5B6' }}>
+              {(['7d', '30d', 'custom'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriod(p)}
+                  style={{
+                    padding: '0.35rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: period === p ? '#171817' : 'transparent',
+                    color: period === p ? '#FFFFFF' : '#52504B',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  {p === '7d' ? 'Past 7 Days' : p === '30d' ? 'Past 30 Days' : 'Custom Range'}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {period === 'custom' && (
-          <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="input-field py-1 text-xs"
-            />
-            <span className="text-xs text-[var(--color-text-muted)]">to</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="input-field py-1 text-xs"
-            />
-          </div>
-        )}
+          {period === 'custom' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="pj-input"
+                style={{ height: '36px', fontSize: '0.8125rem', paddingLeft: '0.5rem' }}
+              />
+              <span style={{ fontSize: '0.75rem', color: '#52504B' }}>to</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="pj-input"
+                style={{ height: '36px', fontSize: '0.8125rem', paddingLeft: '0.5rem' }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 0', gap: '0.75rem' }}>
+          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
+          <span style={{ fontSize: '0.875rem', color: '#52504B' }}>Generating financial insights…</span>
         </div>
       ) : summary && (
         <div className="space-y-6">
-          {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-5 rounded-xl">
-              <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase tracking-wider">Total Orders Placed</span>
-              <p className="text-3xl font-bold text-white mt-1">{summary.total_orders_placed}</p>
+          {/* ── KPI Summary Cards ── */}
+          <div className="metrics-grid">
+            <div className="pj-stat-card">
+              <span className="pj-stat-label">Total Orders Placed</span>
+              <p className="pj-stat-number">{summary.total_orders_placed}</p>
             </div>
-            <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-5 rounded-xl">
-              <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase tracking-wider">Total Recorded Cost</span>
-              <p className="text-3xl font-bold text-[var(--color-accent)] mt-1">${summary.total_order_cost.toFixed(2)}</p>
+            <div className="pj-stat-card">
+              <span className="pj-stat-label">Total Recorded Cost</span>
+              <p className="pj-stat-number" style={{ color: '#7A6438' }}>${summary.total_order_cost.toFixed(2)}</p>
             </div>
-            <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-5 rounded-xl">
-              <span className="text-xs text-[var(--color-text-muted)] font-semibold uppercase tracking-wider">Raw Materials Consumed</span>
-              <p className="text-3xl font-bold text-green-400 mt-1">{summary.raw_material_summary_count} types</p>
+            <div className="pj-stat-card">
+              <span className="pj-stat-label">Raw Materials Consumed</span>
+              <p className="pj-stat-number" style={{ color: '#496B58' }}>{summary.raw_material_summary_count} types</p>
             </div>
           </div>
 
-          {/* Recharts Bar Chart: Top Raw Materials Consumed */}
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-6 rounded-xl space-y-4">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Layers className="w-5 h-5 text-[var(--color-accent)]" /> Top Consumed Raw Materials (Units)
+          {/* ── Recharts Bar Chart ── */}
+          <div className="pj-stat-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Layers style={{ width: 18, height: 18, color: '#A88A52' }} /> Top Consumed Raw Materials (Units)
             </h3>
             {summary.top_materials_used.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-muted)] py-6 text-center">No raw material consumption data recorded for this timeframe.</p>
+              <p style={{ fontSize: '0.875rem', color: '#52504B', padding: '2rem 0', textAlign: 'center' }}>
+                No raw material consumption data recorded for this timeframe.
+              </p>
             ) : (
-              <div className="h-64 w-full">
+              <div style={{ width: '100%', height: 260 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={summary.top_materials_used}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                    <XAxis dataKey="name" stroke="var(--color-text-muted)" fontSize={12} />
-                    <YAxis stroke="var(--color-text-muted)" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#D8D2C4" />
+                    <XAxis dataKey="name" stroke="#52504B" fontSize={12} tickLine={false} />
+                    <YAxis stroke="#52504B" fontSize={12} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ backgroundColor: 'var(--color-paper-card)', borderColor: 'var(--color-border)' }}
-                      itemStyle={{ color: 'var(--color-accent)' }}
+                      contentStyle={{ backgroundColor: '#FFFFFF', borderColor: '#CCC5B6', borderRadius: '8px', color: '#171817' }}
+                      itemStyle={{ color: '#7A6438', fontWeight: 700 }}
                     />
-                    <Bar dataKey="total_units_used" fill="var(--color-accent)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="total_units_used" fill="#496B58" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             )}
           </div>
 
-          {/* Top Consumed Materials Breakdown List */}
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-6 rounded-xl space-y-4">
-            <h3 className="font-bold text-lg">Detailed Raw Material Consumption Ledger</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+          {/* ── Consumption Breakdown Table ── */}
+          <div className="pj-stat-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Detailed Raw Material Consumption Ledger</h3>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                 <thead>
-                  <tr className="border-b border-[var(--color-border)] text-xs font-semibold text-[var(--color-text-muted)] uppercase">
-                    <th className="py-2 px-2">Material Name</th>
-                    <th className="py-2 px-2">Color</th>
-                    <th className="py-2 px-2 text-center">Units Consumed</th>
-                    <th className="py-2 px-2 text-right">Total Line Cost</th>
+                  <tr style={{ borderBottom: '1px solid #CCC5B6', fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#52504B' }}>
+                    <th style={{ padding: '0.625rem 0.5rem' }}>Material Name</th>
+                    <th style={{ padding: '0.625rem 0.5rem' }}>Color</th>
+                    <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Units Consumed</th>
+                    <th style={{ padding: '0.625rem 0.5rem', textAlign: 'right' }}>Total Line Cost</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--color-border)] text-xs">
+                <tbody>
                   {summary.top_materials_used.map((mat, idx) => (
-                    <tr key={idx} className="hover:bg-[var(--color-paper-card-hover)]">
-                      <td className="py-2.5 px-2 font-semibold text-white">{mat.name}</td>
-                      <td className="py-2.5 px-2 text-[var(--color-text-muted)]">{mat.color}</td>
-                      <td className="py-2.5 px-2 text-center font-bold text-[var(--color-accent)]">{mat.total_units_used} units</td>
-                      <td className="py-2.5 px-2 text-right font-medium text-green-400">${mat.total_line_cost.toFixed(2)}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #CCC5B6' }}>
+                      <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: '#171817' }}>{mat.name}</td>
+                      <td style={{ padding: '0.625rem 0.5rem', color: '#52504B' }}>{mat.color}</td>
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#496B58' }}>
+                        {mat.total_units_used} units
+                      </td>
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#7A6438' }}>
+                        ${mat.total_line_cost.toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

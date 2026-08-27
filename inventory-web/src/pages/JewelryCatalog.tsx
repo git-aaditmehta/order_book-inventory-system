@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { Jewelry, RawMaterial, UserRole } from '../types';
 import { 
-  Gem, Plus, Search, RefreshCw, Edit2, Trash2, X, Layers, Scale, CheckCircle2
+  Gem, Plus, Search, RefreshCw, Edit2, Trash2, X, 
+  Layers, Scale, CheckCircle2, ChevronDown, ChevronUp 
 } from 'lucide-react';
 
 interface JewelryCatalogProps {
@@ -139,234 +140,215 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     setSelectedJewelry(null);
   };
 
+  // Helper to calculate total BOM recipe cost for an item
+  const calculateTotalCost = (j: Jewelry): number | null => {
+    let total = 0;
+    let hasValidCost = false;
+    for (const r of j.recipes) {
+      const rm = rawMaterials.find(m => m.id === r.raw_material_id);
+      if (rm && rm.cost_per_unit !== null && rm.cost_per_unit !== undefined) {
+        total += r.required_quantity * rm.cost_per_unit;
+        hasValidCost = true;
+      }
+    }
+    return hasValidCost ? total : null;
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="precision-jewelry-page space-y-6">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Gem className="w-6 h-6 text-[var(--color-accent)]" />
-            <span>Jewelry Master Catalog</span>
-          </h1>
-          <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            Jewelry items and their BOM raw material recipe breakdown.
+          <h1 className="pj-header-title">Jewelry Master Catalog</h1>
+          <p className="pj-header-subtitle">
+            Catalog inventory · {jewelryList.length} item{jewelryList.length !== 1 ? 's' : ''} with BOM raw material recipes
           </p>
         </div>
 
         {userRole === 'OWNER' && (
-          <button onClick={() => { resetForm(); setAddModalOpen(true); }} className="btn-primary">
-            <Plus className="w-4 h-4" /> Add Jewelry Item
+          <button onClick={() => { resetForm(); setAddModalOpen(true); }} className="pj-btn-add">
+            <Plus style={{ width: 16, height: 16 }} /> Add Jewelry Item
           </button>
         )}
       </div>
 
-      {/* Flexible Search */}
-      <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] p-4 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-[var(--color-text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search by SKU ID (e.g. J-101)..."
-            value={searchSku}
-            onChange={(e) => setSearchSku(e.target.value)}
-            className="input-field pl-9"
-          />
-        </div>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3.5 text-[var(--color-text-muted)]" />
-          <input
-            type="text"
-            placeholder="Search by Color..."
-            value={searchColor}
-            onChange={(e) => setSearchColor(e.target.value)}
-            className="input-field pl-9"
-          />
+      {/* ── Search & Filter Controls ── */}
+      <div className="pj-search-box">
+        <div className="search-grid">
+          <div style={{ position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '0.875rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 16,
+              height: 16,
+              color: '#52504B',
+              pointerEvents: 'none',
+            }} />
+            <input
+              type="text"
+              placeholder="Search by SKU ID (e.g. J-101)…"
+              value={searchSku}
+              onChange={(e) => setSearchSku(e.target.value)}
+              className="pj-input"
+            />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '0.875rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 16,
+              height: 16,
+              color: '#52504B',
+              pointerEvents: 'none',
+            }} />
+            <input
+              type="text"
+              placeholder="Filter by color…"
+              value={searchColor}
+              onChange={(e) => setSearchColor(e.target.value)}
+              className="pj-input"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Jewelry Cards Grid */}
+      {/* ── Jewelry Cards Grid ── */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <RefreshCw className="w-8 h-8 text-[var(--color-accent)] animate-spin" />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 0', gap: '0.75rem' }}>
+          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
+          <span style={{ fontSize: '0.875rem', color: '#52504B' }}>Loading master catalog…</span>
         </div>
       ) : jewelryList.length === 0 ? (
-        <div className="text-center py-12 bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl">
-          <Gem className="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-3 opacity-40" />
-          <p className="font-semibold text-lg">No Jewelry Items Found</p>
-          <p className="text-sm text-[var(--color-text-muted)]">Setup jewelry SKU recipes using Owner controls.</p>
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          border: '1px solid #CCC5B6',
+          borderRadius: '14px',
+          padding: '3rem 1rem',
+          textAlign: 'center',
+        }}>
+          <Gem style={{ width: 40, height: 40, color: '#CCC5B6', margin: '0 auto 0.75rem auto' }} />
+          <p style={{ fontWeight: 600, fontSize: '1rem', color: '#171817' }}>No Jewelry Items Found</p>
+          <p style={{ fontSize: '0.875rem', color: '#52504B', marginTop: '0.25rem' }}>
+            {searchSku || searchColor
+              ? 'Try adjusting your SKU or color filters.'
+              : 'Add jewelry SKU items with raw material recipes.'}
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="material-grid">
           {jewelryList.map((j) => (
-            <div
+            <JewelryCard
               key={j.id}
-              className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 flex flex-col justify-between"
-            >
-              <div>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-xl leading-tight">{j.sku_id}</h3>
-                    <span className="badge-gold mt-1 inline-block">{j.color}</span>
-                  </div>
-                  <div className="text-right text-xs text-[var(--color-text-muted)] space-y-0.5">
-                    <div className="flex items-center justify-end gap-1">
-                      <Scale className="w-3.5 h-3.5" />
-                      <span>Before: {j.weight_before}g</span>
-                    </div>
-                    <div>After: {j.weight_after}g</div>
-                  </div>
-                </div>
-
-                {/* Recipe Section */}
-                <div className="mt-4 space-y-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-[var(--color-accent)]" /> BOM Recipe (per 1 unit):
-                  </span>
-                  <div className="bg-[var(--color-paper)] p-3 rounded-lg border border-[var(--color-border)] space-y-2 text-xs">
-                    {j.recipes.length === 0 ? (
-                      <span className="text-[var(--color-text-muted)]">No recipes configured.</span>
-                    ) : (
-                      j.recipes.map((r, i) => (
-                        <div key={i} className="flex justify-between items-center py-1 px-2.5 rounded bg-[#131b2e] border border-[#233256]">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white">{r.raw_material_name || 'Material'}</span>
-                            {r.raw_material_color && (
-                              <span className="badge-gold text-[10px] py-0.5 px-2">{r.raw_material_color}</span>
-                            )}
-                          </div>
-                          <span className="font-bold text-[var(--color-accent)] bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">
-                            {r.required_quantity} units
-                          </span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              {userRole === 'OWNER' && (
-                <div className="pt-3 border-t border-[var(--color-border)] flex justify-end gap-2">
-                  <button onClick={() => openEditModal(j)} className="btn-secondary text-xs py-1.5 px-3">
-                    <Edit2 className="w-3.5 h-3.5" /> Edit Recipe
-                  </button>
-                  <button onClick={() => handleDelete(j)} className="p-1.5 text-red-400 hover:text-red-300">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-            </div>
+              j={j}
+              userRole={userRole}
+              calculatedCost={calculateTotalCost(j)}
+              rawMaterials={rawMaterials}
+              onEdit={() => openEditModal(j)}
+              onDelete={() => handleDelete(j)}
+            />
           ))}
         </div>
       )}
 
-      {/* Add Modal */}
+      {/* ── Add Modal ── */}
       {addModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg text-white">Add Jewelry Master Item</h3>
-              <button onClick={() => setAddModalOpen(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+        <div className="modal-overlay" onClick={() => setAddModalOpen(false)}>
+          <div className="pj-modal-box" style={{ maxWidth: '34rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="pj-modal-header">
+              <h3 className="pj-modal-title">Add Jewelry Master Item</h3>
+              <button onClick={() => setAddModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#52504B' }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
-            <form onSubmit={handleAddSubmit} className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">SKU ID *</label>
-                  <input type="text" placeholder="e.g. J-908" value={skuId} onChange={e => setSkuId(e.target.value)} className="input-field font-semibold" required />
+                  <label className="pj-form-label">SKU ID *</label>
+                  <input type="text" placeholder="e.g. J-908" value={skuId} onChange={e => setSkuId(e.target.value)} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Color *</label>
-                  <input type="text" placeholder="e.g. Blue" value={color} onChange={e => setColor(e.target.value)} className="input-field font-semibold" required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight Before (g)</label>
-                  <input type="number" step="0.001" value={weightBefore} onChange={e => setWeightBefore(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight After (g)</label>
-                  <input type="number" step="0.001" value={weightAfter} onChange={e => setWeightAfter(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Color *</label>
+                  <input type="text" placeholder="e.g. Rose Gold" value={color} onChange={e => setColor(e.target.value)} className="pj-input" style={{ paddingLeft: '0.875rem' }} required />
                 </div>
               </div>
 
-              {/* Recipe Selector List */}
-              <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)] flex items-center gap-1.5">
-                    <Layers className="w-4 h-4" /> Raw Material Recipes (per 1 unit)
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label className="pj-form-label">Weight Before (g)</label>
+                  <input type="number" step="0.001" value={weightBefore} onChange={e => setWeightBefore(e.target.value ? parseFloat(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
+                </div>
+                <div>
+                  <label className="pj-form-label">Weight After (g)</label>
+                  <input type="number" step="0.001" value={weightAfter} onChange={e => setWeightAfter(e.target.value ? parseFloat(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
+                </div>
+              </div>
+
+              {/* Recipe Selector Rows */}
+              <div style={{ borderTop: '1px solid #CCC5B6', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#806B3F', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Layers style={{ width: 14, height: 14 }} /> BOM Recipe (per 1 unit)
                   </span>
-                  <button type="button" onClick={handleAddRecipeRow} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 font-semibold cursor-pointer">
-                    <Plus className="w-3.5 h-3.5" /> Add Material
+                  <button type="button" onClick={handleAddRecipeRow} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A88A52', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Plus style={{ width: 14, height: 14 }} /> Add Material
                   </button>
                 </div>
 
                 {recipeInputs.map((row, idx) => {
                   const selectedMat = rawMaterials.find(rm => rm.id === row.raw_material_id);
                   return (
-                    <div key={idx} className="bg-[#0b0f19] border border-[var(--color-border)] p-3 rounded-xl space-y-2">
-                      <div className="flex gap-3 items-center">
-                        <div className="flex-1">
-                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                            Raw Material #{idx + 1}
-                          </label>
+                    <div key={idx} style={{ backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="pj-form-label" style={{ fontSize: '0.625rem' }}>Raw Material #{idx + 1}</label>
                           <select
                             value={row.raw_material_id}
                             onChange={e => handleRecipeChange(idx, 'raw_material_id', e.target.value)}
-                            className="input-field w-full text-white font-medium bg-[#131b2e] border-[#263352]"
+                            className="pj-input"
+                            style={{ paddingLeft: '0.75rem', height: '38px', fontSize: '0.8125rem' }}
                             required
                           >
-                            <option value="" className="bg-[#131b2e] text-gray-400">-- Select Raw Material --</option>
+                            <option value="">-- Select Raw Material --</option>
                             {rawMaterials.map(rm => (
-                              <option key={rm.id} value={rm.id} className="bg-[#131b2e] text-white">
+                              <option key={rm.id} value={rm.id}>
                                 {rm.name} ({rm.color}) — {rm.packets} pkts ({rm.total_units} units avail)
                               </option>
                             ))}
                           </select>
                         </div>
 
-                        <div className="w-28">
-                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                            Required Qty
-                          </label>
+                        <div style={{ width: '100px' }}>
+                          <label className="pj-form-label" style={{ fontSize: '0.625rem' }}>Qty</label>
                           <input
                             type="number"
                             min="1"
-                            placeholder="Qty"
                             value={row.required_quantity}
                             onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
-                            className="input-field w-full text-center font-bold text-amber-400"
+                            className="pj-input"
+                            style={{ paddingLeft: '0.5rem', textAlign: 'center', height: '38px', fontSize: '0.8125rem', fontWeight: 700 }}
                             required
                           />
                         </div>
 
                         {recipeInputs.length > 1 && (
-                          <button 
-                            type="button" 
-                            onClick={() => handleRemoveRecipeRow(idx)} 
-                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg mt-4 cursor-pointer"
-                            title="Remove Row"
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRecipeRow(idx)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B5757', padding: '0.35rem', marginTop: '1.25rem' }}
                           >
-                            <X className="w-4 h-4" />
+                            <X style={{ width: 16, height: 16 }} />
                           </button>
                         )}
                       </div>
 
-                      {/* Selected Material Info Chip */}
-                      {selectedMat ? (
-                        <div className="flex items-center justify-between text-xs bg-[#131b2e] px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-300">
-                          <span className="font-semibold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
-                            Selected: {selectedMat.name} ({selectedMat.color})
-                          </span>
-                          <span className="text-[11px] text-gray-300">
-                            Available Stock: <strong className="text-amber-400">{selectedMat.total_units}</strong> units ({selectedMat.packets} pkts + {selectedMat.loose_units} loose)
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-gray-500 italic pl-1">
-                          Please select a raw material from the dropdown.
+                      {selectedMat && (
+                        <div style={{ fontSize: '0.75rem', color: '#496B58', fontWeight: 600, display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #CCC5B6', paddingTop: '0.35rem' }}>
+                          <span>Selected: {selectedMat.name} ({selectedMat.color})</span>
+                          <span>Avail: {selectedMat.total_units} units</span>
                         </div>
                       )}
                     </div>
@@ -374,109 +356,102 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
                 })}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
-                <button type="button" onClick={() => setAddModalOpen(false)} className="btn-secondary w-auto px-5">Cancel</button>
-                <button type="submit" className="btn-primary w-auto px-6">Save Jewelry Item</button>
+              <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                <button type="button" onClick={() => setAddModalOpen(false)} className="pj-action-btn-ghost" style={{ flex: 1, justifyContent: 'center', height: '42px', border: '1px solid #CCC5B6' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="pj-btn-add" style={{ flex: 2, justifyContent: 'center', height: '42px' }}>
+                  Save Jewelry Item
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ── */}
       {editModalOpen && selectedJewelry && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
-          <div className="bg-[var(--color-paper-card)] border border-[var(--color-border)] rounded-xl w-full max-w-xl p-6 space-y-4 max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex justify-between items-center pb-3 border-b border-[var(--color-border)]">
-              <h3 className="font-bold text-lg text-white">Edit Jewelry: {selectedJewelry.sku_id} ({selectedJewelry.color})</h3>
-              <button onClick={() => setEditModalOpen(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+        <div className="modal-overlay" onClick={() => setEditModalOpen(false)}>
+          <div className="pj-modal-box" style={{ maxWidth: '34rem' }} onClick={(e) => e.stopPropagation()}>
+            <div className="pj-modal-header">
+              <h3 className="pj-modal-title">Edit Jewelry: {selectedJewelry.sku_id} ({selectedJewelry.color})</h3>
+              <button onClick={() => setEditModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#52504B' }}>
+                <X style={{ width: 18, height: 18 }} />
+              </button>
             </div>
-            <form onSubmit={handleEditSubmit} className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight Before (g)</label>
-                  <input type="number" step="0.001" value={weightBefore} onChange={e => setWeightBefore(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Weight Before (g)</label>
+                  <input type="number" step="0.001" value={weightBefore} onChange={e => setWeightBefore(e.target.value ? parseFloat(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-muted)] mb-1 uppercase tracking-wider">Weight After (g)</label>
-                  <input type="number" step="0.001" value={weightAfter} onChange={e => setWeightAfter(e.target.value ? parseFloat(e.target.value) : '')} className="input-field" />
+                  <label className="pj-form-label">Weight After (g)</label>
+                  <input type="number" step="0.001" value={weightAfter} onChange={e => setWeightAfter(e.target.value ? parseFloat(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
               </div>
 
-              <div className="space-y-3 pt-3 border-t border-[var(--color-border)]">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-accent)] flex items-center gap-1.5">
-                    <Layers className="w-4 h-4" /> Update BOM Recipe List
+              <div style={{ borderTop: '1px solid #CCC5B6', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#806B3F', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Layers style={{ width: 14, height: 14 }} /> Update BOM Recipe List
                   </span>
-                  <button type="button" onClick={handleAddRecipeRow} className="text-xs text-[var(--color-accent)] hover:underline flex items-center gap-1 font-semibold cursor-pointer">
-                    <Plus className="w-3.5 h-3.5" /> Add Material
+                  <button type="button" onClick={handleAddRecipeRow} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A88A52', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Plus style={{ width: 14, height: 14 }} /> Add Material
                   </button>
                 </div>
 
                 {recipeInputs.map((row, idx) => {
                   const selectedMat = rawMaterials.find(rm => rm.id === row.raw_material_id);
                   return (
-                    <div key={idx} className="bg-[#0b0f19] border border-[var(--color-border)] p-3 rounded-xl space-y-2">
-                      <div className="flex gap-3 items-center">
-                        <div className="flex-1">
-                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                            Raw Material #{idx + 1}
-                          </label>
+                    <div key={idx} style={{ backgroundColor: '#E0D9CB', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <div style={{ flex: 1 }}>
+                          <label className="pj-form-label" style={{ fontSize: '0.625rem' }}>Raw Material #{idx + 1}</label>
                           <select
                             value={row.raw_material_id}
                             onChange={e => handleRecipeChange(idx, 'raw_material_id', e.target.value)}
-                            className="input-field w-full text-white font-medium bg-[#131b2e] border-[#263352]"
+                            className="pj-input"
+                            style={{ paddingLeft: '0.75rem', height: '38px', fontSize: '0.8125rem' }}
                             required
                           >
-                            <option value="" className="bg-[#131b2e] text-gray-400">-- Select Raw Material --</option>
+                            <option value="">-- Select Raw Material --</option>
                             {rawMaterials.map(rm => (
-                              <option key={rm.id} value={rm.id} className="bg-[#131b2e] text-white">
+                              <option key={rm.id} value={rm.id}>
                                 {rm.name} ({rm.color}) — {rm.packets} pkts ({rm.total_units} units avail)
                               </option>
                             ))}
                           </select>
                         </div>
 
-                        <div className="w-28">
-                          <label className="block text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">
-                            Required Qty
-                          </label>
+                        <div style={{ width: '100px' }}>
+                          <label className="pj-form-label" style={{ fontSize: '0.625rem' }}>Qty</label>
                           <input
                             type="number"
                             min="1"
-                            placeholder="Qty"
                             value={row.required_quantity}
                             onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
-                            className="input-field w-full text-center font-bold text-amber-400"
+                            className="pj-input"
+                            style={{ paddingLeft: '0.5rem', textAlign: 'center', height: '38px', fontSize: '0.8125rem', fontWeight: 700 }}
                             required
                           />
                         </div>
 
                         {recipeInputs.length > 1 && (
-                          <button 
-                            type="button" 
-                            onClick={() => handleRemoveRecipeRow(idx)} 
-                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-950/40 rounded-lg mt-4 cursor-pointer"
-                            title="Remove Row"
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRecipeRow(idx)}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9B5757', padding: '0.35rem', marginTop: '1.25rem' }}
                           >
-                            <X className="w-4 h-4" />
+                            <X style={{ width: 16, height: 16 }} />
                           </button>
                         )}
                       </div>
 
-                      {selectedMat ? (
-                        <div className="flex items-center justify-between text-xs bg-[#131b2e] px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-300">
-                          <span className="font-semibold flex items-center gap-1.5">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
-                            Selected: {selectedMat.name} ({selectedMat.color})
-                          </span>
-                          <span className="text-[11px] text-gray-300">
-                            Available Stock: <strong className="text-amber-400">{selectedMat.total_units}</strong> units ({selectedMat.packets} pkts + {selectedMat.loose_units} loose)
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="text-[11px] text-gray-500 italic pl-1">
-                          Please select a raw material from the dropdown.
+                      {selectedMat && (
+                        <div style={{ fontSize: '0.75rem', color: '#496B58', fontWeight: 600, display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #CCC5B6', paddingTop: '0.35rem' }}>
+                          <span>Selected: {selectedMat.name} ({selectedMat.color})</span>
+                          <span>Avail: {selectedMat.total_units} units</span>
                         </div>
                       )}
                     </div>
@@ -484,9 +459,13 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
                 })}
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-[var(--color-border)]">
-                <button type="button" onClick={() => setEditModalOpen(false)} className="btn-secondary w-auto px-5">Cancel</button>
-                <button type="submit" className="btn-primary w-auto px-6">Save Changes</button>
+              <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '0.5rem' }}>
+                <button type="button" onClick={() => setEditModalOpen(false)} className="pj-action-btn-ghost" style={{ flex: 1, justifyContent: 'center', height: '42px', border: '1px solid #CCC5B6' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="pj-btn-add" style={{ flex: 2, justifyContent: 'center', height: '42px' }}>
+                  Save Changes
+                </button>
               </div>
             </form>
           </div>
@@ -495,3 +474,173 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     </div>
   );
 };
+
+/* ─── Compact Collapsible Jewelry Card Sub-Component ─── */
+
+interface JewelryCardProps {
+  j: Jewelry;
+  userRole: UserRole;
+  calculatedCost: number | null;
+  rawMaterials: RawMaterial[];
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+const JewelryCard: React.FC<JewelryCardProps> = ({ j, userRole, calculatedCost, rawMaterials, onEdit, onDelete }) => {
+  const [expanded, setExpanded] = useState(false);
+  const gem = getGemColor(j.color);
+
+  return (
+    <article
+      className={`pj-material-card ${expanded ? 'pj-material-card--expanded' : 'pj-material-card--compact'}`}
+      style={{ cursor: 'pointer' }}
+      onClick={() => setExpanded(!expanded)}
+    >
+      {/* Top Header: SKU ID, Color Swatch, Total Recipe Costing & Expand Icon */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <h3 className="pj-material-name">{j.sku_id}</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.35rem', flexWrap: 'wrap' }}>
+            <div className="pj-color-indicator" style={{ marginTop: 0 }}>
+              <span
+                className="pj-color-dot"
+                style={{
+                  backgroundColor: gem.bg,
+                  border: gem.border ? `1px solid ${gem.border}` : 'none'
+                }}
+              />
+              <span>{j.color}</span>
+            </div>
+            {/* Quick recipe summary count visible when collapsed */}
+            {!expanded && (
+              <span style={{ fontSize: '0.75rem', fontFamily: 'var(--pj-font-mono)', fontWeight: 600, color: '#52504B' }}>
+                · {j.recipes.length} material{j.recipes.length !== 1 ? 's' : ''} in BOM
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          {userRole === 'OWNER' && calculatedCost !== null && (
+            <div style={{ textAlign: 'right' }}>
+              <span style={{ fontSize: '0.625rem', color: '#52504B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Total Cost
+              </span>
+              <span className="pj-unit-cost">${calculatedCost.toFixed(2)}</span>
+            </div>
+          )}
+          <button
+            type="button"
+            aria-label={expanded ? "Collapse details" : "Expand details"}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#52504B',
+              padding: '0.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            {expanded ? <ChevronUp style={{ width: 16, height: 16 }} /> : <ChevronDown style={{ width: 16, height: 16 }} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded Details Body */}
+      {expanded && (
+        <div
+          className="animate-fadeIn"
+          style={{ marginTop: '0.75rem' }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <hr className="pj-divider" />
+
+          {/* Weights metadata */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', color: '#52504B' }}>
+            <span>Weight Before: <strong>{j.weight_before}g</strong></span>
+            <span>Weight After: <strong>{j.weight_after}g</strong></span>
+          </div>
+
+          <hr className="pj-divider" />
+
+          {/* BOM Recipe Breakdown */}
+          <div>
+            <div className="pj-total-stock-label" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: '#806B3F' }}>
+              <Layers style={{ width: 13, height: 13 }} /> BOM Recipe (per 1 unit)
+            </div>
+            {j.recipes.length === 0 ? (
+              <p style={{ fontSize: '0.8125rem', color: '#52504B', fontStyle: 'italic' }}>No raw material recipe configured.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginTop: '0.35rem' }}>
+                {j.recipes.map((r, idx) => {
+                  const rm = rawMaterials.find(m => m.id === r.raw_material_id);
+                  const lineCost = (rm && rm.cost_per_unit !== null && rm.cost_per_unit !== undefined)
+                    ? r.required_quantity * rm.cost_per_unit
+                    : null;
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        backgroundColor: '#E0D9CB',
+                        border: '1px solid #CCC5B6',
+                        borderRadius: '6px',
+                        padding: '0.35rem 0.625rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.8125rem'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: '#171817' }}>
+                        {r.raw_material_name || 'Material'} ({r.raw_material_color || 'Default'})
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#496B58' }}>
+                          {r.required_quantity} units
+                        </span>
+                        {userRole === 'OWNER' && lineCost !== null && (
+                          <span style={{ fontFamily: 'var(--pj-font-mono)', fontSize: '0.75rem', color: '#7A6438' }}>
+                            (${lineCost.toFixed(2)})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <hr className="pj-divider" />
+
+          {/* Action Controls */}
+          {userRole === 'OWNER' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button onClick={onEdit} className="pj-action-btn-ghost" title="Edit Recipe">
+                <Edit2 style={{ width: 14, height: 14 }} /> Edit Recipe
+              </button>
+              <button onClick={onDelete} className="pj-action-btn-danger" title="Archive Item">
+                <Trash2 style={{ width: 14, height: 14 }} /> Archive
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
+};
+
+/* Helper: Color Dot */
+function getGemColor(colorName: string): { bg: string; border?: string } {
+  const c = colorName.toLowerCase();
+  if (c.includes('green') || c.includes('emerald') || c.includes('jade')) return { bg: '#496B58' };
+  if (c.includes('red') || c.includes('ruby') || c.includes('garnet') || c.includes('rose')) return { bg: '#9B5757' };
+  if (c.includes('gold') || c.includes('yellow') || c.includes('amber')) return { bg: '#A88A52' };
+  if (c.includes('silver') || c.includes('platinum') || c.includes('steel') || c.includes('gray')) return { bg: '#94A3B8' };
+  if (c.includes('pearl') || c.includes('white') || c.includes('ivory')) return { bg: '#FFFFFF', border: '#CBD5E1' };
+  if (c.includes('black') || c.includes('onyx') || c.includes('dark')) return { bg: '#171817' };
+  if (c.includes('blue') || c.includes('sapphire')) return { bg: '#3B82F6' };
+  return { bg: '#A88A52' };
+}

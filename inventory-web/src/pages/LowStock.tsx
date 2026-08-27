@@ -48,7 +48,7 @@ export const LowStock: React.FC<LowStockProps> = () => {
 
       {/* ── Threshold Filter Bar ── */}
       <div className="pj-search-box">
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyBetween: 'space-between', gap: '1rem', width: '100%' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Sliders style={{ width: 18, height: 18, color: '#A88A52' }} />
             <span style={{ fontSize: '0.875rem', fontWeight: 600, color: '#171817' }}>Filter Threshold:</span>

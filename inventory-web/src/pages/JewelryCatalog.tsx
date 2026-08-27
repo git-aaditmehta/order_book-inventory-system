@@ -3,7 +3,7 @@ import { api } from '../api/client';
 import type { Jewelry, RawMaterial, UserRole } from '../types';
 import { 
   Gem, Plus, Search, RefreshCw, Edit2, Trash2, X, 
-  Layers, Scale, CheckCircle2, ChevronDown, ChevronUp 
+  Layers, ChevronDown, ChevronUp 
 } from 'lucide-react';
 
 interface JewelryCatalogProps {

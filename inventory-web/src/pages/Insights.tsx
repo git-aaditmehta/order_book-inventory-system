@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
 import type { InsightsSummary, UserRole } from '../types';
-import { BarChart3, Download, Calendar, RefreshCw, Layers } from 'lucide-react';
+import { Download, Calendar, RefreshCw, Layers } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import jsPDF from 'jspdf';
 

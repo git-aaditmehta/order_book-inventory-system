@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../api/client';
 import type { OrderPreviewResponse, OrderProcessResponse, UserRole } from '../types';
-import { BookOpen, CheckCircle, AlertOctagon, ArrowRight, RefreshCw } from 'lucide-react';
+import { CheckCircle, AlertOctagon, ArrowRight, RefreshCw } from 'lucide-react';
 
 interface OrderBookProps {
   userRole: UserRole;

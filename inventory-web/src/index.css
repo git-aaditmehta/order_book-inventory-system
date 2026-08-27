@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/* Hallmark Theme & Design System Tokens */
+:root {
+  --color-paper: #0b0f19;
+  --color-paper-card: #131b2e;
+  --color-paper-card-hover: #1c2742;
+  --color-border: #263352;
+  --color-border-focus: #e5b842;
+  
+  --color-text-main: #f3f4f6;
+  --color-text-muted: #9ca3af;
+  
+  --color-accent: #f59e0b; /* Gold Accent */
+  --color-accent-hover: #d97706;
+  --color-accent-text: #0b0f19;
+  
+  --color-danger: #ef4444;
+  --color-danger-bg: #450a0a;
+  --color-success: #22c55e;
+  --color-success-bg: #052e16;
+  
+  --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-text-main);
+  font-family: var(--font-main);
+  overflow-x: clip;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container limits */
+.auth-card-container {
+  max-width: 28rem;
+  width: 100%;
+  margin: 0 auto;
+  background-color: var(--color-paper-card);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+  padding: 2rem;
+}
+
+/* Form Input Styling */
+.input-field {
+  background-color: #0b0f19;
+  border: 1px solid var(--color-border);
+  color: #f3f4f6;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.5rem;
+  width: 100%;
+  font-size: 0.875rem;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.input-field-icon {
+  padding-left: 2.5rem !important;
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
+/* Button Component Styles */
+.btn-primary {
+  background-color: var(--color-accent);
+  color: var(--color-accent-text);
+  font-weight: 600;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.btn-primary:hover {
+  background-color: var(--color-accent-hover);
+}
+
+.btn-secondary {
+  background-color: var(--color-paper-card);
+  color: var(--color-text-main);
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-paper-card-hover);
+}
+
+.badge-gold {
+  background-color: #2b2005;
+  color: var(--color-accent);
+  border: 1px solid #78540b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}
+
+.badge-muted {
+  background-color: #172033;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+}

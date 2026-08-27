@@ -32,7 +32,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except Exception as err:
         logger.debug(f"Supabase auth get_user check failed: {err}")
 
-    # Method 2: Fallback to local JWT decode (for local tests or custom tokens)
+    # Method 2: Local JWT decode with verified signature (using SUPABASE_JWT_SECRET)
     if not user_id and settings.SUPABASE_JWT_SECRET:
         try:
             payload = jwt.decode(
@@ -46,16 +46,6 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             user_metadata = payload.get("user_metadata", {})
         except Exception as e:
             logger.debug(f"Local JWT decode failed: {e}")
-
-    # Method 3: Fallback to unverified decode (if token was generated locally for testing)
-    if not user_id:
-        try:
-            payload = jwt.decode(token, options={"verify_signature": False})
-            user_id = payload.get("sub")
-            user_email = payload.get("email", "")
-            user_metadata = payload.get("user_metadata", {})
-        except Exception as e:
-            logger.error(f"All JWT verification methods failed: {e}")
 
     if not user_id:
         raise HTTPException(

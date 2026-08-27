@@ -2,3 +2,4 @@ inventory-api/.env
 inventory-api/venv
 inventory-web/.env
 .agents
+graphify-out/

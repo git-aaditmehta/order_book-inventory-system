@@ -34,6 +34,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Startup environment variable check
+@app.on_event("startup")
+async def validate_environment():
+    if settings.ENV == "production":
+        missing_vars = []
+        if not settings.SUPABASE_URL:
+            missing_vars.append("SUPABASE_URL")
+        if not settings.SUPABASE_SERVICE_ROLE_KEY:
+            missing_vars.append("SUPABASE_SERVICE_ROLE_KEY")
+        if missing_vars:
+            logger.error(f"CRITICAL: Production startup blocked. Missing env vars: {missing_vars}")
+            raise RuntimeError(f"Missing mandatory production environment variables: {', '.join(missing_vars)}")
+
 # Global Security Headers Middleware
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
@@ -41,6 +54,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
 # Include Routers

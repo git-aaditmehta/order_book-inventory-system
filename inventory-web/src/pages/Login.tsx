@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase, api } from '../api/client';
 import type { UserRole } from '../types';
-import { Gem, Lock, Mail, Shield, User, ArrowRight, RefreshCw, Zap } from 'lucide-react';
+import { Gem, Lock, Mail, Shield, User, ArrowRight, RefreshCw } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (role: UserRole, email: string, token: string) => void;
@@ -15,42 +15,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const handleQuickLogin = async (targetRole: UserRole) => {
-    const targetEmail = targetRole === 'OWNER' ? 'owner_test@example.com' : 'manager_test@example.com';
-    const targetPassword = 'TestPassword123!';
-    
-    setEmail(targetEmail);
-    setPassword(targetPassword);
-    setRole(targetRole);
-    setLoading(true);
-    setErrorMsg(null);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: targetEmail,
-        password: targetPassword
-      });
-
-      if (error) throw error;
-      const token = data.session.access_token;
-      localStorage.setItem('supabase_token', token);
-
-      try {
-        const profileRes = await api.get('/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const userRole = profileRes.data.role as UserRole;
-        onLoginSuccess(userRole, targetEmail, token);
-      } catch {
-        onLoginSuccess(targetRole, targetEmail, token);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Quick login failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,68 +113,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <p style={{ fontSize: '0.8125rem', color: '#52504B' }}>
             BOM Accounting & Order Calculation System
           </p>
-        </div>
-
-        {/* Quick Demo Login Section */}
-        <div style={{
-          backgroundColor: '#E0D9CB',
-          border: '1px solid #CCC5B6',
-          borderRadius: '10px',
-          padding: '0.875rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.5rem'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#7A6438', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              <Zap style={{ width: 12, height: 12 }} /> 1-Click Quick Demo Login
-            </span>
-            <span style={{ fontSize: '0.625rem', color: '#52504B' }}>Pre-seeded Data</span>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('OWNER')}
-              disabled={loading}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                backgroundColor: '#171817',
-                color: '#FFFFFF',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem'
-              }}
-            >
-              <Shield style={{ width: 12, height: 12 }} /> Owner Demo
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('MANAGER')}
-              disabled={loading}
-              style={{
-                padding: '0.5rem',
-                borderRadius: '6px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                backgroundColor: '#FFFFFF',
-                color: '#171817',
-                border: '1px solid #CCC5B6',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.35rem'
-              }}
-            >
-              <User style={{ width: 12, height: 12 }} /> Manager Demo
-            </button>
-          </div>
         </div>
 
         {/* Error Alert */}

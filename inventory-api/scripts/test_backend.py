@@ -1,6 +1,6 @@
 """
 Automated Backend Verification Test Script
-Tests model validation, cost redaction logic, and API router setup.
+Tests model validation, cost redaction logic, and multi-jewelry batch order models.
 """
 
 import sys
@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from app.models import (
     RawMaterialCreate, JewelryCreate, JewelryRecipeItem, 
+    OrderItemInput, OrderPreviewRequest, OrderProcessRequest,
     redact_cost_for_manager
 )
 
@@ -43,6 +44,18 @@ class TestBackendLogic(unittest.TestCase):
         self.assertEqual(j.sku_id, "J-101")
         self.assertEqual(len(j.recipes), 1)
         self.assertEqual(j.recipes[0].required_quantity, 20)
+
+    def test_batch_order_models(self):
+        item1 = OrderItemInput(sku_id="JW-101", color="Gold", order_quantity=5)
+        item2 = OrderItemInput(sku_id="JW-102", color="White", order_quantity=10)
+        
+        req = OrderPreviewRequest(items=[item1, item2])
+        self.assertEqual(len(req.items), 2)
+        self.assertEqual(req.items[0].sku_id, "JW-101")
+        self.assertEqual(req.items[1].order_quantity, 10)
+
+        proc_req = OrderProcessRequest(items=[item1, item2])
+        self.assertEqual(len(proc_req.items), 2)
 
     def test_cost_redaction_for_manager(self):
         sample_data = {

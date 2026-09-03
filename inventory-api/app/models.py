@@ -67,23 +67,34 @@ class JewelryResponse(BaseModel):
     recipes: List[Dict[str, Any]] = []
     created_at: Optional[datetime] = None
 
-# --- Order Book Models ---
-class OrderPreviewRequest(BaseModel):
-    sku_id: str
-    color: str
+# --- Order Book Models (Batch & Multi-Jewelry Supported) ---
+class OrderItemInput(BaseModel):
+    sku_id: str = Field(..., min_length=1)
+    color: str = Field(..., min_length=1)
     order_quantity: int = Field(..., ge=1)
 
+class OrderPreviewRequest(BaseModel):
+    items: Optional[List[OrderItemInput]] = None
+    # Backward compatibility for single item payload
+    sku_id: Optional[str] = None
+    color: Optional[str] = None
+    order_quantity: Optional[int] = None
+
 class OrderProcessRequest(BaseModel):
-    sku_id: str
-    color: str
-    order_quantity: int = Field(..., ge=1)
+    items: Optional[List[OrderItemInput]] = None
+    # Backward compatibility for single item payload
+    sku_id: Optional[str] = None
+    color: Optional[str] = None
+    order_quantity: Optional[int] = None
 
 class OrderProcessResponse(BaseModel):
     success: bool
+    batch_id: Optional[str] = None
     order_transaction_id: Optional[str] = None
     sku_id: Optional[str] = None
     color: Optional[str] = None
     order_quantity: Optional[int] = None
+    items_processed: Optional[List[Dict[str, Any]]] = None
     total_order_cost: Optional[float] = None
     materials_used: Optional[List[Dict[str, Any]]] = None
     error_code: Optional[str] = None

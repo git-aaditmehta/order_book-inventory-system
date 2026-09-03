@@ -10,9 +10,9 @@ Key Highlights:
 - **Mobile-First UX**: Optimized for fast touch interaction, clean ledger views, and minimal input steps.
 - **No Image Overhead**: Ultra-fast UI focused purely on mathematical accuracy and rapid order processing.
 - **Jewelry Setup**: Each Jewelry item is identified uniquely by **`SKU_ID` + `Color`** (no unnecessary name field). When setting up jewelry, the Owner selects the required Raw Materials and inputs the exact quantity needed to produce 1 unit of that jewelry.
-- **Order Book (Single Ledger Transaction)**: The user places an order by entering only **SKU ID, Color, and Quantity**. The system automatically fetches the jewelry's raw material recipe, calculates total materials needed, verifies stock, deducts stock atomically, and records everything in a single **`order_transactions`** table.
+- **Multi-Jewelry Batch Ordering (Order Book)**: The user can place an order for **multiple jewelry items at the same time** (e.g., 2, 5, 10 items in a single batch). The system automatically fetches the raw material recipes for all items, **aggregates coincident raw materials**, calculates total required units, packets needed (`X pkts (Y loose)`), checks against current stock, verifies sufficiency, and executes an atomic batch deduction recorded in `order_transactions` with a shared `batch_id`.
 - **Packet + Optional Loose Units Math**: Raw materials track `packets` and optional `loose_units` (defaults to 0). Remaining stock displays as `"X packets (Y total units) and Z loose units"`.
-- **Strict Stock Blocking**: Orders cannot be placed if any required raw material stock is insufficient; explicit alerts highlight missing quantities.
+- **Strict Stock Blocking**: Orders cannot be placed if any required raw material stock is insufficient across the batch; explicit alerts highlight missing quantities.
 - **Role Access & Financial Privacy**: 
   - **OWNER**: Full administrative control, cost visibility across all screens, master setup (Raw Materials & Jewelry recipes), security logs, and exclusive access to financial Insights & PDF reporting.
   - **MANAGER**: Operational access restricted to placing orders in the Order Book, viewing read-only stock levels, and low stock alerts. **All cost/monetary data is completely redacted from both frontend UI and backend API responses for managers.**
@@ -117,6 +117,7 @@ CREATE INDEX idx_recipes_jewelry ON jewelry_recipes(jewelry_id);
 ```sql
 CREATE TABLE order_transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    batch_id UUID, -- Shared UUID for multi-jewelry batch orders
     jewelry_id UUID NOT NULL REFERENCES jewelry(id) ON DELETE RESTRICT,
     sku_id VARCHAR(50) NOT NULL,
     color VARCHAR(50) NOT NULL,
@@ -130,6 +131,7 @@ CREATE TABLE order_transactions (
 
 CREATE INDEX idx_order_transactions_created_at ON order_transactions(created_at DESC);
 CREATE INDEX idx_order_transactions_jewelry ON order_transactions(jewelry_id);
+CREATE INDEX idx_order_transactions_batch_id ON order_transactions(batch_id);
 ```
 
 #### `settings`
@@ -144,152 +146,27 @@ CREATE TABLE settings (
 
 ---
 
-## 5. Atomic PostgreSQL Stored Procedure (`process_order`)
+## 5. Multi-Jewelry Batch Ordering Business Logic
 
-```sql
-CREATE OR REPLACE FUNCTION process_order(
-    p_sku_id VARCHAR,
-    p_color VARCHAR,
-    p_order_quantity INTEGER,
-    p_user_id UUID,
-    p_user_role VARCHAR
-) RETURNS JSONB AS $$
-DECLARE
-    v_jewelry RECORD;
-    v_recipe RECORD;
-    v_req_units INTEGER;
-    v_units_before INTEGER;
-    v_units_after INTEGER;
-    v_pkts_before INTEGER;
-    v_loose_before INTEGER;
-    v_pkts_after INTEGER;
-    v_loose_after INTEGER;
-    v_line_cost DECIMAL(12,2);
-    v_total_order_cost DECIMAL(12,2) := 0.00;
-    v_materials_json JSONB := '[]'::jsonb;
-    v_insufficient_list TEXT[] := ARRAY[]::TEXT[];
-    v_order_id UUID;
-BEGIN
-    -- 1. Find Jewelry by SKU_ID and Color
-    SELECT * INTO v_jewelry FROM jewelry 
-    WHERE LOWER(sku_id) = LOWER(p_sku_id) AND LOWER(color) = LOWER(p_color) AND is_archived = FALSE;
-    
-    IF NOT FOUND THEN
-        RETURN jsonb_build_object('success', false, 'error_code', 'JEWELRY_NOT_FOUND', 'message', 'Jewelry SKU and Color combination not found.');
-    END IF;
+### 5.1 Batch Preview & Aggregation
+When the user adds multiple jewelry items to an order batch:
+$$\text{Items} = [(\text{SKU}_1, \text{Color}_1, Q_1), (\text{SKU}_2, \text{Color}_2, Q_2), \dots]$$
 
-    -- 2. Lock and Check Raw Materials Stock
-    FOR v_recipe IN 
-        SELECT r.*, rm.name as rm_name, rm.color as rm_color, rm.packets, rm.quantity_per_packet, rm.loose_units, rm.total_units, rm.cost_per_unit
-        FROM jewelry_recipes r
-        JOIN raw_materials rm ON r.raw_material_id = rm.id
-        WHERE r.jewelry_id = v_jewelry.id AND rm.is_archived = FALSE
-    LOOP
-        v_req_units := v_recipe.required_quantity * p_order_quantity;
-        
-        -- Lock row for update
-        SELECT total_units INTO v_units_before FROM raw_materials WHERE id = v_recipe.raw_material_id FOR UPDATE;
-        
-        IF v_units_before < v_req_units THEN
-            v_insufficient_list := array_append(v_insufficient_list, 
-                v_recipe.rm_name || ' (' || v_recipe.rm_color || '): Required ' || v_req_units || ', Available ' || v_units_before);
-        END IF;
-    END LOOP;
+For each distinct raw material $m$:
+$$\text{Total Required Units}_m = \sum_{i} \left( Q_i \times \text{RecipeQuantity}_{i, m} \right)$$
+$$\text{Packets Needed}_m = \lfloor \text{Total Required Units}_m / \text{QuantityPerPacket}_m \rfloor$$
+$$\text{Loose Needed}_m = \text{Total Required Units}_m \pmod{\text{QuantityPerPacket}_m}$$
 
-    -- If any material is short, block transaction
-    IF array_length(v_insufficient_list, 1) > 0 THEN
-        RETURN jsonb_build_object(
-            'success', false, 
-            'error_code', 'INSUFFICIENT_STOCK', 
-            'message', 'Order blocked due to insufficient raw material stock.',
-            'shortages', to_jsonb(v_insufficient_list)
-        );
-    END IF;
+### 5.2 Stock Sufficiency Check
+$$\text{IsSufficient}_m = (\text{Total Available Units}_m \ge \text{Total Required Units}_m)$$
+If $\text{IsSufficient}_m = \text{False}$ for **any** material $m$, the entire batch order is blocked.
 
-    -- 3. Calculate Deductions & Update Raw Materials Stock
-    FOR v_recipe IN 
-        SELECT r.*, rm.name as rm_name, rm.color as rm_color, rm.packets, rm.quantity_per_packet, rm.loose_units, rm.total_units, rm.cost_per_unit
-        FROM jewelry_recipes r
-        JOIN raw_materials rm ON r.raw_material_id = rm.id
-        WHERE r.jewelry_id = v_jewelry.id
-    LOOP
-        v_req_units := v_recipe.required_quantity * p_order_quantity;
-        
-        -- Current stock snapshot
-        v_units_before := (v_recipe.packets * v_recipe.quantity_per_packet) + v_recipe.loose_units;
-        v_pkts_before := v_recipe.packets;
-        v_loose_before := v_recipe.loose_units;
-        
-        -- Remaining stock calculation
-        v_units_after := v_units_before - v_req_units;
-        v_pkts_after := v_units_after / v_recipe.quantity_per_packet;
-        v_loose_after := v_units_after % v_recipe.quantity_per_packet;
-        
-        -- Cost calculation
-        v_line_cost := v_req_units * v_recipe.cost_per_unit;
-        v_total_order_cost := v_total_order_cost + v_line_cost;
-        
-        -- Update Raw Material Stock in DB
-        UPDATE raw_materials
-        SET packets = v_pkts_after,
-            loose_units = v_loose_after,
-            updated_at = now()
-        WHERE id = v_recipe.raw_material_id;
-        
-        -- Append material summary snapshot
-        v_materials_json := v_materials_json || jsonb_build_object(
-            'raw_material_id', v_recipe.raw_material_id,
-            'name', v_recipe.rm_name,
-            'color', v_recipe.rm_color,
-            'units_used', v_req_units,
-            'stock_before', jsonb_build_object('packets', v_pkts_before, 'loose', v_loose_before, 'total_units', v_units_before),
-            'stock_after', jsonb_build_object('packets', v_pkts_after, 'loose', v_loose_after, 'total_units', v_units_after),
-            'line_cost', v_line_cost
-        );
-    END LOOP;
-
-    -- 4. Record Single Order Transaction Ledger Row
-    INSERT INTO order_transactions (
-        jewelry_id, sku_id, color, order_quantity, materials_summary, total_order_cost, placed_by_user_id, placed_by_role
-    ) VALUES (
-        v_jewelry.id, v_jewelry.sku_id, v_jewelry.color, p_order_quantity, v_materials_json, v_total_order_cost, p_user_id, p_user_role
-    ) RETURNING id INTO v_order_id;
-
-    -- Sanitize cost fields if role is MANAGER before returning API payload
-    RETURN jsonb_build_object(
-        'success', true,
-        'order_transaction_id', v_order_id,
-        'sku_id', v_jewelry.sku_id,
-        'color', v_jewelry.color,
-        'order_quantity', p_order_quantity,
-        'total_order_cost', CASE WHEN p_user_role = 'OWNER' THEN v_total_order_cost ELSE NULL END,
-        'materials_used', (
-            SELECT jsonb_agg(
-                jsonb_build_object(
-                    'raw_material_id', elem->'raw_material_id',
-                    'name', elem->'name',
-                    'color', elem->'color',
-                    'units_used', elem->'units_used',
-                    'stock_before', elem->'stock_before',
-                    'stock_after', elem->'stock_after',
-                    'line_cost', CASE WHEN p_user_role = 'OWNER' THEN (elem->>'line_cost')::decimal ELSE NULL END
-                )
-            ) FROM jsonb_array_elements(v_materials_json) elem
-        )
-    );
-END;
-$$ LANGUAGE plpgsql;
-```
-
----
-
-## 6. Math & Loose Units Rules
-1. **Inputs**: `packets` is required; `loose_units` is optional (defaults to `0`).
-2. **Formula**: $\text{Total Units} = (\text{Packets} \times \text{Quantity Per Packet}) + \text{Loose Units}$.
-3. **Display Output**: Always displays as `"X packets (Y total units) and Z loose units"`.
-
----
-
-## 7. Security, Redaction & Roles
-- **OWNER**: Full access, cost visibility, raw material setup, jewelry BOM setup, security log, Insights & PDF reports.
-- **MANAGER**: Order Book input (`SKU_ID` + `Color` + `Order Quantity`), read-only product availability view. **Costs strictly stripped (`null`) from FastAPI backend response.**
+### 5.3 Stored Procedure: `process_batch_order`
+- Atomically locks all distinct raw material rows (`FOR UPDATE`).
+- Verifies stock sufficiency across all batch items simultaneously.
+- If any material is short: rolls back cleanly and returns a list of missing materials.
+- If all materials are available:
+  - Deducts total required units from each raw material.
+  - Normalizes remaining stock into full packets and loose units.
+  - Inserts individual order line items into `order_transactions` linked by `batch_id`.
+  - Returns complete execution summary and material deduction snapshots.

@@ -47,13 +47,30 @@ export interface MaterialUsageSnapshot {
   line_cost?: number | null; // Null for Manager
 }
 
+export interface OrderItemInput {
+  sku_id: string;
+  color: string;
+  order_quantity: number;
+}
+
+export interface BatchItemSummary {
+  jewelry_id?: string;
+  sku_id: string;
+  color: string;
+  order_quantity: number;
+  weight_before?: number;
+  weight_after?: number;
+}
+
 export interface OrderProcessResponse {
   success: boolean;
+  batch_id?: string;
   order_transaction_id?: string;
   id?: string;
   sku_id?: string;
   color?: string;
   order_quantity?: number;
+  items_processed?: BatchItemSummary[];
   total_order_cost?: number | null;
   materials_used?: MaterialUsageSnapshot[];
   materials_summary?: MaterialUsageSnapshot[];
@@ -64,6 +81,7 @@ export interface OrderProcessResponse {
 
 export interface OrderTransaction {
   id: string;
+  batch_id?: string;
   sku_id: string;
   color: string;
   order_quantity: number;
@@ -76,13 +94,14 @@ export interface OrderTransaction {
 }
 
 export interface OrderPreviewResponse {
-  jewelry: {
+  items?: BatchItemSummary[];
+  jewelry?: {
     id: string;
     sku_id: string;
     color: string;
     weight_before: number;
     weight_after: number;
-  };
+  } | null;
   order_quantity: number;
   is_executable: boolean;
   shortages: string[];

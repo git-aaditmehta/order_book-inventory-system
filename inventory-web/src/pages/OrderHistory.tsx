@@ -130,7 +130,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({ tx, userRole }) => {
             </span>
             {userRole === 'OWNER' && tx.total_order_cost !== null && (
               <span className="pj-unit-cost" style={{ fontSize: '1.125rem' }}>
-                ${tx.total_order_cost?.toFixed(2)}
+                {tx.total_order_cost?.toFixed(2)}
               </span>
             )}
           </div>
@@ -161,7 +161,7 @@ const TransactionCard: React.FC<TransactionCardProps> = ({ tx, userRole }) => {
                   </div>
                   {userRole === 'OWNER' && mat.line_cost !== null && (
                     <div style={{ textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: '#7A6438' }}>
-                      Cost: ${mat.line_cost?.toFixed(2)}
+                      Cost: {mat.line_cost?.toFixed(2)}
                     </div>
                   )}
                 </div>

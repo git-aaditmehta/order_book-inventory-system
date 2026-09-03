@@ -66,7 +66,7 @@ export const Insights: React.FC<InsightsProps> = () => {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text(`Total Orders Placed: ${summary.total_orders_placed}`, 14, 58);
-    doc.text(`Total Recorded Cost: $${summary.total_order_cost.toFixed(2)}`, 14, 66);
+    doc.text(`Total Recorded Cost: ${summary.total_order_cost.toFixed(2)}`, 14, 66);
     doc.text(`Distinct Raw Materials Used: ${summary.raw_material_summary_count}`, 14, 74);
 
     // Top Raw Materials Used Table
@@ -87,7 +87,7 @@ export const Insights: React.FC<InsightsProps> = () => {
       y += 10;
       doc.text(`${mat.name} (${mat.color})`, 16, y);
       doc.text(`${mat.total_units_used} units`, 110, y);
-      doc.text(`$${mat.total_line_cost.toFixed(2)}`, 160, y);
+      doc.text(`${mat.total_line_cost.toFixed(2)}`, 160, y);
       if (y > 270) {
         doc.addPage();
         y = 20;
@@ -180,7 +180,7 @@ export const Insights: React.FC<InsightsProps> = () => {
             </div>
             <div className="pj-stat-card">
               <span className="pj-stat-label">Total Recorded Cost</span>
-              <p className="pj-stat-number" style={{ color: '#7A6438' }}>${summary.total_order_cost.toFixed(2)}</p>
+              <p className="pj-stat-number" style={{ color: '#7A6438' }}>{summary.total_order_cost.toFixed(2)}</p>
             </div>
             <div className="pj-stat-card">
               <span className="pj-stat-label">Raw Materials Consumed</span>
@@ -237,7 +237,7 @@ export const Insights: React.FC<InsightsProps> = () => {
                         {mat.total_units_used} units
                       </td>
                       <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#7A6438' }}>
-                        ${mat.total_line_cost.toFixed(2)}
+                        {mat.total_line_cost.toFixed(2)}
                       </td>
                     </tr>
                   ))}

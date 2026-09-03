@@ -326,7 +326,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
                     className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
                 <div>
-                  <label className="pj-form-label">Unit Cost ($)</label>
+                  <label className="pj-form-label">Unit Cost</label>
                   <input type="number" step="0.0001" min="0" value={formCostPerUnit}
                     onChange={e => setFormCostPerUnit(e.target.value ? parseFloat(e.target.value) : '')}
                     className="pj-input" style={{ paddingLeft: '0.875rem' }} />
@@ -380,7 +380,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
                   <input type="number" min="0" value={formLooseUnits} onChange={e => setFormLooseUnits(e.target.value ? parseInt(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
                 <div>
-                  <label className="pj-form-label">Unit Cost ($)</label>
+                  <label className="pj-form-label">Unit Cost</label>
                   <input type="number" step="0.0001" min="0" value={formCostPerUnit} onChange={e => setFormCostPerUnit(e.target.value ? parseFloat(e.target.value) : '')} className="pj-input" style={{ paddingLeft: '0.875rem' }} />
                 </div>
               </div>
@@ -486,7 +486,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
                       </span>
                       {userRole === 'OWNER' && log.line_cost !== null && (
                         <span style={{ color: '#806B3F', fontFamily: 'var(--pj-font-mono)', fontWeight: 600 }}>
-                          ${log.line_cost?.toFixed(2)}
+                          {log.line_cost?.toFixed(2)}
                         </span>
                       )}
                     </div>
@@ -552,7 +552,7 @@ const MaterialCard: React.FC<MaterialCardProps> = ({ mat, userRole, onHistory, o
               <span style={{ fontSize: '0.625rem', color: '#52504B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Unit Cost
               </span>
-              <span className="pj-unit-cost">${mat.cost_per_unit?.toFixed(2)}</span>
+              <span className="pj-unit-cost">{mat.cost_per_unit?.toFixed(2)}</span>
             </div>
           )}
           <button

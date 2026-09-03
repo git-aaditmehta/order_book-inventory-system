@@ -182,7 +182,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                   Calculated Order Cost
                 </span>
                 <span className="pj-unit-cost" style={{ fontSize: '1.35rem' }}>
-                  ${previewData.total_order_cost?.toFixed(2)}
+                  {previewData.total_order_cost?.toFixed(2)}
                 </span>
               </div>
             )}
@@ -253,7 +253,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                     </td>
                     {userRole === 'OWNER' && (
                       <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#7A6438' }}>
-                        ${mat.line_cost?.toFixed(2)}
+                        {mat.line_cost?.toFixed(2)}
                       </td>
                     )}
                   </tr>
@@ -298,7 +298,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
             {userRole === 'OWNER' && successResult.total_order_cost !== null && successResult.total_order_cost !== undefined && (
               <div style={{ backgroundColor: '#E0D9CB', padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', border: '1px solid #CCC5B6' }}>
                 <span style={{ fontWeight: 600, color: '#52504B' }}>Recorded Order Cost:</span>
-                <span className="pj-unit-cost" style={{ fontSize: '1.125rem' }}>${successResult.total_order_cost?.toFixed(2)}</span>
+                <span className="pj-unit-cost" style={{ fontSize: '1.125rem' }}>{successResult.total_order_cost?.toFixed(2)}</span>
               </div>
             )}
 

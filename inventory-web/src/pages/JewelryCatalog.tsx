@@ -526,7 +526,7 @@ const JewelryCard: React.FC<JewelryCardProps> = ({ j, userRole, calculatedCost, 
               <span style={{ fontSize: '0.625rem', color: '#52504B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Total Cost
               </span>
-              <span className="pj-unit-cost">${calculatedCost.toFixed(2)}</span>
+              <span className="pj-unit-cost">{calculatedCost.toFixed(2)}</span>
             </div>
           )}
           <button
@@ -602,7 +602,7 @@ const JewelryCard: React.FC<JewelryCardProps> = ({ j, userRole, calculatedCost, 
                         </span>
                         {userRole === 'OWNER' && lineCost !== null && (
                           <span style={{ fontFamily: 'var(--pj-font-mono)', fontSize: '0.75rem', color: '#7A6438' }}>
-                            (${lineCost.toFixed(2)})
+                            ({lineCost.toFixed(2)})
                           </span>
                         )}
                       </div>

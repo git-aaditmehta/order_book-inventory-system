@@ -223,41 +223,53 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                 <tr style={{ borderBottom: '1px solid #CCC5B6', fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#52504B' }}>
                   <th style={{ padding: '0.625rem 0.5rem' }}>Raw Material</th>
                   <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Required Units</th>
+                  <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Packets Needed</th>
                   <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Current Stock</th>
                   <th style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>Stock Status</th>
                   {userRole === 'OWNER' && <th style={{ padding: '0.625rem 0.5rem', textAlign: 'right' }}>Line Cost</th>}
                 </tr>
               </thead>
               <tbody>
-                {previewData.materials_required.map((mat) => (
-                  <tr key={mat.raw_material_id} style={{ borderBottom: '1px solid #CCC5B6' }}>
-                    <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: '#171817' }}>
-                      {mat.name} <span style={{ fontWeight: 400, color: '#52504B' }}>({mat.color})</span>
-                    </td>
-                    <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#496B58' }}>
-                      {mat.units_required} units
-                    </td>
-                    <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', color: '#52504B' }}>
-                      {Math.floor(mat.total_available / mat.quantity_per_packet)} pkts ({mat.total_available % mat.quantity_per_packet} loose)
-                    </td>
-                    <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>
-                      {mat.is_sufficient ? (
-                        <span style={{ backgroundColor: '#DFE8E3', color: '#496B58', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <CheckCircle style={{ width: 12, height: 12 }} /> Sufficient
-                        </span>
-                      ) : (
-                        <span style={{ backgroundColor: '#F5E3E3', color: '#9B5757', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <AlertOctagon style={{ width: 12, height: 12 }} /> Shortage
-                        </span>
-                      )}
-                    </td>
-                    {userRole === 'OWNER' && (
-                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#7A6438' }}>
-                        {mat.line_cost?.toFixed(2)}
+                {previewData.materials_required.map((mat) => {
+                  const pktsNeeded = Math.floor(mat.units_required / mat.quantity_per_packet);
+                  const looseNeeded = mat.units_required % mat.quantity_per_packet;
+                  const pktDisplay = pktsNeeded > 0
+                    ? `${pktsNeeded} pkts${looseNeeded > 0 ? ` (${looseNeeded} loose)` : ''}`
+                    : `${looseNeeded} loose`;
+
+                  return (
+                    <tr key={mat.raw_material_id} style={{ borderBottom: '1px solid #CCC5B6' }}>
+                      <td style={{ padding: '0.625rem 0.5rem', fontWeight: 600, color: '#171817' }}>
+                        {mat.name} <span style={{ fontWeight: 400, color: '#52504B' }}>({mat.color})</span>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#496B58' }}>
+                        {mat.units_required} units
+                      </td>
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', fontWeight: 600, color: '#806B3F' }}>
+                        {pktDisplay}
+                      </td>
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontFamily: 'var(--pj-font-mono)', color: '#52504B' }}>
+                        {Math.floor(mat.total_available / mat.quantity_per_packet)} pkts ({mat.total_available % mat.quantity_per_packet} loose)
+                      </td>
+                      <td style={{ padding: '0.625rem 0.5rem', textAlign: 'center' }}>
+                        {mat.is_sufficient ? (
+                          <span style={{ backgroundColor: '#DFE8E3', color: '#496B58', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <CheckCircle style={{ width: 12, height: 12 }} /> Sufficient
+                          </span>
+                        ) : (
+                          <span style={{ backgroundColor: '#F5E3E3', color: '#9B5757', fontWeight: 700, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <AlertOctagon style={{ width: 12, height: 12 }} /> Shortage
+                          </span>
+                        )}
+                      </td>
+                      {userRole === 'OWNER' && (
+                        <td style={{ padding: '0.625rem 0.5rem', textAlign: 'right', fontFamily: 'var(--pj-font-mono)', fontWeight: 700, color: '#7A6438' }}>
+                          {mat.line_cost?.toFixed(2)}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

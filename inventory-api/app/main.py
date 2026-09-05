@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.routers import raw_materials, jewelry, orders, low_stock, insights, security, auth
+from app.routers import raw_materials, jewelry, orders, low_stock, insights, security, auth, backup
 from app.config import settings
 from app.database import get_supabase
 import logging
@@ -65,6 +65,7 @@ app.include_router(orders.router)
 app.include_router(low_stock.router)
 app.include_router(insights.router)
 app.include_router(security.router)
+app.include_router(backup.router)
 
 @app.get("/", tags=["Health"])
 async def root_index():

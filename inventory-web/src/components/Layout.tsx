@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { 
   BookOpen, Package, Gem, History, AlertTriangle, 
-  BarChart3, Shield, LogOut, Menu, X, ChevronRight
+  BarChart3, Shield, Database, LogOut, Menu, X, ChevronRight
 } from 'lucide-react';
 import type { UserRole } from '../types';
 
@@ -22,6 +22,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
     { label: 'Order History',   path: '/history',       icon: History,       roles: ['OWNER', 'MANAGER'] },
     { label: 'Low Stock',       path: '/low-stock',     icon: AlertTriangle, roles: ['OWNER', 'MANAGER'] },
     { label: 'Insights & PDF',  path: '/insights',      icon: BarChart3,     roles: ['OWNER'] },
+    { label: 'Backup & Export', path: '/backup',        icon: Database,      roles: ['OWNER'] },
     { label: 'Security Panel',  path: '/security',      icon: Shield,        roles: ['OWNER'] },
   ];
 

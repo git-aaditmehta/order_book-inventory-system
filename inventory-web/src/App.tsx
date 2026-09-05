@@ -8,6 +8,7 @@ import { JewelryCatalog } from './pages/JewelryCatalog';
 import { OrderHistory } from './pages/OrderHistory';
 import { LowStock } from './pages/LowStock';
 import { Insights } from './pages/Insights';
+import { Backup } from './pages/Backup';
 import { SecurityDashboard } from './pages/SecurityDashboard';
 import type { UserRole } from './types';
 
@@ -62,6 +63,10 @@ export function App() {
           <Route 
             path="insights" 
             element={userRole === 'OWNER' ? <Insights userRole={userRole} /> : <Navigate to="/order-book" replace />} 
+          />
+          <Route 
+            path="backup" 
+            element={userRole === 'OWNER' ? <Backup userRole={userRole} /> : <Navigate to="/order-book" replace />} 
           />
           <Route 
             path="security" 

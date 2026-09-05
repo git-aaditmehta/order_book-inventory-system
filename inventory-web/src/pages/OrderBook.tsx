@@ -1,19 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../api/client';
-import type { OrderItemInput, OrderPreviewResponse, OrderProcessResponse, UserRole } from '../types';
-import { CheckCircle, AlertOctagon, ArrowRight, RefreshCw, Plus, Trash2, Layers, Package, FileText } from 'lucide-react';
+import type { OrderItemInput, OrderPreviewResponse, OrderProcessResponse, UserRole, Jewelry } from '../types';
+import { 
+  CheckCircle, AlertOctagon, ArrowRight, RefreshCw, Plus, Trash2, 
+  Layers, Package, FileText, Search, Sparkles 
+} from 'lucide-react';
 import jsPDF from 'jspdf';
+
+const DRAFT_STORAGE_KEY = 'luxe_draft_order_items';
 
 interface OrderBookProps {
   userRole: UserRole;
 }
 
 export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
-  // Multi-jewelry item rows in the batch cart
-  const [orderItems, setOrderItems] = useState<OrderItemInput[]>([
-    { sku_id: '', color: '', order_quantity: 1 }
-  ]);
-  
+  // Load initial draft items from localStorage if available
+  const [orderItems, setOrderItems] = useState<OrderItemInput[]>(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse draft order items:', e);
+    }
+    return [{ sku_id: '', color: '', order_quantity: 1 }];
+  });
+
+  const [jewelryCatalog, setJewelryCatalog] = useState<Jewelry[]>([]);
+  const [focusedSkuIdx, setFocusedSkuIdx] = useState<number | null>(null);
+
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingProcess, setLoadingProcess] = useState(false);
   
@@ -21,6 +40,41 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   const [successResult, setSuccessResult] = useState<OrderProcessResponse | null>(null);
   const [lastPreviewMaterials, setLastPreviewMaterials] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Fetch jewelry catalog for smart autocomplete and color suggestion
+  const fetchCatalog = async () => {
+    try {
+      const res = await api.get('/jewelry');
+      setJewelryCatalog(res.data || []);
+    } catch (err) {
+      console.error('Failed to load jewelry catalog for autocomplete:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchCatalog();
+  }, []);
+
+  // Save draft order items to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(orderItems));
+    } catch (e) {
+      console.error('Failed to save draft order items:', e);
+    }
+  }, [orderItems]);
+
+  // Unique list of SKUs in catalog
+  const uniqueSkus = Array.from(new Set(jewelryCatalog.map(j => j.sku_id.trim()))).filter(Boolean);
+
+  // Get colors available for a given SKU
+  const getColorsForSku = (sku: string): string[] => {
+    if (!sku.trim()) return [];
+    const matches = jewelryCatalog.filter(
+      j => j.sku_id.trim().toLowerCase() === sku.trim().toLowerCase()
+    );
+    return Array.from(new Set(matches.map(j => j.color.trim()))).filter(Boolean);
+  };
 
   const handleAddItemRow = () => {
     setOrderItems([
@@ -32,17 +86,36 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   const handleRemoveItemRow = (index: number) => {
     if (orderItems.length <= 1) return;
     setOrderItems(orderItems.filter((_, i) => i !== index));
-    // Reset preview if rows are modified
     setPreviewData(null);
   };
 
   const handleItemChange = (index: number, field: keyof OrderItemInput, value: any) => {
     const updated = [...orderItems];
     updated[index] = { ...updated[index], [field]: value };
+
+    // If SKU is changed, check if there's only 1 color and auto-fill it
+    if (field === 'sku_id' && typeof value === 'string') {
+      const availableColors = getColorsForSku(value);
+      if (availableColors.length === 1 && !updated[index].color) {
+        updated[index].color = availableColors[0];
+      }
+    }
+
     setOrderItems(updated);
-    // Clear previous preview on edits
     setPreviewData(null);
     setErrorMessage(null);
+  };
+
+  const handleSelectSkuSuggestion = (index: number, selectedSku: string) => {
+    const updated = [...orderItems];
+    updated[index].sku_id = selectedSku;
+    const availableColors = getColorsForSku(selectedSku);
+    if (availableColors.length === 1) {
+      updated[index].color = availableColors[0];
+    }
+    setOrderItems(updated);
+    setFocusedSkuIdx(null);
+    setPreviewData(null);
   };
 
   const formatErrorMsg = (detail: any): string => {
@@ -114,6 +187,9 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
 
       setSuccessResult(res.data);
       setPreviewData(null);
+
+      // Clear draft on successful order completion
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch (err: any) {
       setErrorMessage(formatErrorMsg(err.response?.data?.detail));
     } finally {
@@ -122,7 +198,9 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   };
 
   const handleReset = () => {
-    setOrderItems([{ sku_id: '', color: '', order_quantity: 1 }]);
+    const emptyDraft = [{ sku_id: '', color: '', order_quantity: 1 }];
+    setOrderItems(emptyDraft);
+    localStorage.removeItem(DRAFT_STORAGE_KEY);
     setPreviewData(null);
     setSuccessResult(null);
     setErrorMessage(null);
@@ -341,7 +419,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
         <div>
           <h1 className="pj-header-title">Order Book Ledger</h1>
           <p className="pj-header-subtitle">
-            Batch ordering · Add multiple jewelry items to calculate combined raw material deductions
+            Batch ordering · Add multiple jewelry items with smart catalog search and saved draft persistence
           </p>
         </div>
 
@@ -352,105 +430,213 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
         )}
       </div>
 
-      {/* ── Batch Order Form (When not previewing or modifying) ── */}
+      {/* ── Batch Order Form ── */}
       {!previewData && !successResult && (
         <div className="pj-stat-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #CCC5B6', paddingBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #CCC5B6', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: '#171817', margin: 0 }}>
-                Order Batch Items ({orderItems.length})
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.0625rem', fontWeight: 700, color: '#171817', margin: 0 }}>
+                  Order Batch Items ({orderItems.length})
+                </h3>
+                <span style={{ fontSize: '0.6875rem', backgroundColor: '#E5EFEA', color: '#284E3A', padding: '0.15rem 0.45rem', borderRadius: '4px', fontWeight: 600 }}>
+                  Auto-Saved Draft
+                </span>
+              </div>
               <span style={{ fontSize: '0.75rem', color: '#52504B' }}>
                 Total Jewelry Quantity: <strong>{totalBatchUnits} pieces</strong>
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleAddItemRow}
-              className="pj-btn-add"
-              style={{ height: '36px', fontSize: '0.8125rem', padding: '0 1rem' }}
-            >
-              <Plus style={{ width: 14, height: 14 }} /> Add Another Jewelry
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                type="button"
+                onClick={handleReset}
+                className="pj-action-btn-ghost"
+                style={{ height: '36px', fontSize: '0.75rem', padding: '0 0.75rem' }}
+                title="Clear all rows and reset draft"
+              >
+                Clear Draft
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddItemRow}
+                className="pj-btn-add"
+                style={{ height: '36px', fontSize: '0.8125rem', padding: '0 1rem' }}
+              >
+                <Plus style={{ width: 14, height: 14 }} /> Add Another Jewelry
+              </button>
+            </div>
           </div>
 
-          <form onSubmit={handlePreview} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {orderItems.map((item, idx) => (
-              <div 
-                key={idx}
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #CCC5B6',
-                  borderRadius: '10px',
-                  padding: '0.875rem 1rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr)) auto',
-                  gap: '0.75rem',
-                  alignItems: 'flex-end',
-                  boxShadow: '0 1px 3px rgba(23, 24, 23, 0.02)'
-                }}
-              >
-                <div>
-                  <label className="pj-form-label" style={{ fontSize: '0.6875rem' }}>
-                    Jewelry #{idx + 1} SKU ID *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. JW-101"
-                    value={item.sku_id}
-                    onChange={(e) => handleItemChange(idx, 'sku_id', e.target.value)}
-                    className="pj-input"
-                    style={{ paddingLeft: '0.875rem', height: '40px' }}
-                    required
-                  />
-                </div>
+          <form onSubmit={handlePreview} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {orderItems.map((item, idx) => {
+              const matchingColors = getColorsForSku(item.sku_id);
+              const filteredSkus = uniqueSkus.filter(s => 
+                s.toLowerCase().includes(item.sku_id.toLowerCase())
+              );
 
-                <div>
-                  <label className="pj-form-label" style={{ fontSize: '0.6875rem' }}>
-                    Color *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Rose Gold"
-                    value={item.color}
-                    onChange={(e) => handleItemChange(idx, 'color', e.target.value)}
-                    className="pj-input"
-                    style={{ paddingLeft: '0.875rem', height: '40px' }}
-                    required
-                  />
-                </div>
+              return (
+                <div 
+                  key={idx}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CCC5B6',
+                    borderRadius: '10px',
+                    padding: '1rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    boxShadow: '0 1px 3px rgba(23, 24, 23, 0.02)',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr)) auto',
+                    gap: '0.75rem',
+                    alignItems: 'flex-start'
+                  }}>
+                    {/* SKU ID Input with Smart Autocomplete */}
+                    <div style={{ position: 'relative' }}>
+                      <label className="pj-form-label" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Search style={{ width: 11, height: 11, color: '#A88A52' }} /> Jewelry #{idx + 1} SKU ID *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search SKU (e.g. JW-102)…"
+                        value={item.sku_id}
+                        onChange={(e) => handleItemChange(idx, 'sku_id', e.target.value)}
+                        onFocus={() => setFocusedSkuIdx(idx)}
+                        onBlur={() => setTimeout(() => setFocusedSkuIdx(null), 250)}
+                        className="pj-input"
+                        style={{ paddingLeft: '0.875rem', height: '40px' }}
+                        autoComplete="off"
+                        required
+                      />
 
-                <div>
-                  <label className="pj-form-label" style={{ fontSize: '0.6875rem' }}>
-                    Quantity *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={item.order_quantity}
-                    onChange={(e) => handleItemChange(idx, 'order_quantity', e.target.value ? parseInt(e.target.value) : '')}
-                    className="pj-input"
-                    style={{ paddingLeft: '0.875rem', fontWeight: 700, height: '40px' }}
-                    required
-                  />
-                </div>
+                      {/* Smart Autocomplete Dropdown List */}
+                      {focusedSkuIdx === idx && filteredSkus.length > 0 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          backgroundColor: '#FFFFFF',
+                          border: '1px solid #CCC5B6',
+                          borderRadius: '8px',
+                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+                          zIndex: 50,
+                          maxHeight: '180px',
+                          overflowY: 'auto',
+                          marginTop: '4px'
+                        }}>
+                          {filteredSkus.map((skuOption) => {
+                            const colors = getColorsForSku(skuOption);
+                            return (
+                              <div
+                                key={skuOption}
+                                onMouseDown={() => handleSelectSkuSuggestion(idx, skuOption)}
+                                style={{
+                                  padding: '0.5rem 0.75rem',
+                                  fontSize: '0.8125rem',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  borderBottom: '1px solid #F0ECE3'
+                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F5F0E6'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                              >
+                                <span style={{ fontWeight: 700, color: '#171817' }}>{skuOption}</span>
+                                <span style={{ fontSize: '0.6875rem', color: '#7A6438' }}>
+                                  {colors.join(', ')}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
 
-                {orderItems.length > 1 && (
-                  <div style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveItemRow(idx)}
-                      className="pj-action-btn-danger"
-                      style={{ height: '40px', width: '40px' }}
-                      title="Remove item"
-                    >
-                      <Trash2 style={{ width: 16, height: 16 }} />
-                    </button>
+                    {/* Color Input + Smart Suggestions */}
+                    <div>
+                      <label className="pj-form-label" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <Sparkles style={{ width: 11, height: 11, color: '#A88A52' }} /> Color *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Rose Gold"
+                        value={item.color}
+                        onChange={(e) => handleItemChange(idx, 'color', e.target.value)}
+                        className="pj-input"
+                        style={{ paddingLeft: '0.875rem', height: '40px' }}
+                        required
+                      />
+
+                      {/* Quick Color Picker Buttons for selected SKU */}
+                      {matchingColors.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.35rem' }}>
+                          <span style={{ fontSize: '0.625rem', color: '#666', alignSelf: 'center' }}>Catalog:</span>
+                          {matchingColors.map((c) => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => handleItemChange(idx, 'color', c)}
+                              style={{
+                                backgroundColor: item.color.toLowerCase() === c.toLowerCase() ? '#A88A52' : '#EFE9DC',
+                                color: item.color.toLowerCase() === c.toLowerCase() ? '#FFFFFF' : '#171817',
+                                border: '1px solid #CCC5B6',
+                                borderRadius: '4px',
+                                padding: '0.1rem 0.4rem',
+                                fontSize: '0.6875rem',
+                                fontWeight: 600,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {c}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Quantity Input */}
+                    <div>
+                      <label className="pj-form-label" style={{ fontSize: '0.6875rem' }}>
+                        Quantity (Pieces) *
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.order_quantity}
+                        onChange={(e) => handleItemChange(idx, 'order_quantity', e.target.value ? parseInt(e.target.value) : '')}
+                        className="pj-input"
+                        style={{ paddingLeft: '0.875rem', fontWeight: 700, height: '40px' }}
+                        required
+                      />
+                    </div>
+
+                    {/* Remove Item Button */}
+                    {orderItems.length > 1 && (
+                      <div style={{ display: 'flex', alignItems: 'center', height: '40px', marginTop: '1.25rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItemRow(idx)}
+                          className="pj-action-btn-danger"
+                          style={{ height: '40px', width: '40px' }}
+                          title="Remove item"
+                        >
+                          <Trash2 style={{ width: 16, height: 16 }} />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid #CCC5B6', marginTop: '0.5rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <button
@@ -575,7 +761,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
             </div>
           )}
 
-          {/* Combined Raw Materials Table (Aggregated across all jewelry items) */}
+          {/* Combined Raw Materials Table */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#806B3F', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -600,11 +786,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                 </thead>
                 <tbody>
                   {previewData.materials_required.map((mat) => {
-                    const pktsNeeded = Math.floor(mat.units_required / mat.quantity_per_packet);
-                    const looseNeeded = mat.units_required % mat.quantity_per_packet;
-                    const pktDisplay = pktsNeeded > 0
-                      ? `${pktsNeeded} pkts${looseNeeded > 0 ? ` (${looseNeeded} loose)` : ''}`
-                      : `${looseNeeded} loose`;
+                    const pktDisplay = formatPacketsNeeded(mat.units_required, mat.quantity_per_packet);
 
                     return (
                       <tr key={mat.raw_material_id} style={{ borderBottom: '1px solid #CCC5B6' }}>

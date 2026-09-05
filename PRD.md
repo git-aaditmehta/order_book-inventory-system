@@ -14,7 +14,7 @@ Key Highlights:
 - **Packet + Optional Loose Units Math**: Raw materials track `packets` and optional `loose_units` (defaults to 0). Remaining stock displays as `"X packets (Y total units) and Z loose units"`.
 - **Strict Stock Blocking**: Orders cannot be placed if any required raw material stock is insufficient across the batch; explicit alerts highlight missing quantities.
 - **Role Access & Financial Privacy**: 
-  - **OWNER**: Full administrative control, cost visibility across all screens, master setup (Raw Materials & Jewelry recipes), security logs, and exclusive access to financial Insights & PDF reporting.
+  - **OWNER**: Full administrative control, cost visibility across all screens, master setup (Raw Materials & Jewelry recipes), security logs, system backup & Excel exports, and exclusive access to financial Insights & PDF reporting.
   - **MANAGER**: Operational access restricted to placing orders in the Order Book, viewing read-only stock levels, and low stock alerts. **All cost/monetary data is completely redacted from both frontend UI and backend API responses for managers.**
 
 ---
@@ -23,7 +23,7 @@ Key Highlights:
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend** | React 18+, TypeScript, Tailwind CSS, TanStack Query, Zustand, Recharts, jsPDF, html2canvas, Lucide React |
+| **Frontend** | React 18+, TypeScript, Tailwind CSS, TanStack Query, Zustand, Recharts, jsPDF, XLSX (SheetJS), html2canvas, Lucide React |
 | **Backend** | Python 3.11+, FastAPI, Pydantic v2, Supabase Python Client |
 | **Database** | PostgreSQL 15+ (Supabase) with PL/pgSQL stored procedures & RLS |
 | **Auth** | Supabase Auth (Email/Password) with custom app roles (`OWNER`, `MANAGER`) |
@@ -43,6 +43,7 @@ Key Highlights:
 | **Restock Raw Materials** | ✅ Yes | ❌ No | Owner can add packets/quantity to existing raw materials. |
 | **Insights & Reports Dashboard** | ✅ Yes | ❌ **No Access** | Insights route is restricted strictly to Owner (contains financial aggregations). |
 | **PDF Report Generation** | ✅ Yes | ❌ **No Access** | Owner can generate 7-day, 30-day, or custom range PDF summary reports. |
+| **Database Backup & Excel Export** | ✅ Yes | ❌ **No Access** | Owner can export full production database tables to multi-worksheet Excel (.xlsx). |
 | **Security & Active Session Control** | ✅ Yes | ❌ **No Access** | View active sessions, device info, IP logs, force logout. |
 
 ---
@@ -170,3 +171,64 @@ If $\text{IsSufficient}_m = \text{False}$ for **any** material $m$, the entire b
   - Normalizes remaining stock into full packets and loose units.
   - Inserts individual order line items into `order_transactions` linked by `batch_id`.
   - Returns complete execution summary and material deduction snapshots.
+
+---
+
+## 6. Backup & Data Export Feature (Excel `.xlsx`)
+
+### 6.1 Overview
+The **Backup & Export** module (`/backup`) allows the **OWNER** to dump all production tables from Supabase into structured, auto-fitted Excel spreadsheets.
+
+### 6.2 Export Modes
+1. **Master System Backup (`Luxe_Craft_Full_Database_Backup_[DATE].xlsx`)**:
+   - A single multi-worksheet workbook containing:
+     - 📋 *Backup Overview*: Metadata, audit timestamps, and total valuation.
+     - 📦 *Raw Materials*: Full inventory stock, packets, loose units, costs, valuation, and status.
+     - 💎 *Jewelry Catalog*: Model SKUs, colors, weights, recipe component counts, and unit costs.
+     - 🔬 *Jewelry BOM Recipes*: Flattened recipe breakdown connecting each jewelry SKU to component raw materials and line costs.
+     - 📜 *Orders History Ledger*: Complete transaction ledger with timestamps, batch IDs, order quantities, total costs, and material deduction snapshots.
+2. **Individual Table Exports**:
+   - `Raw_Materials_Backup.xlsx`
+   - `Jewelry_and_Recipes_Backup.xlsx`
+   - `Orders_Ledger_Backup.xlsx`
+
+---
+
+## 7. Order Book & Order History Enhancements
+
+### 7.1 Ultra-Lightweight PDF Receipt Generation
+- **Fast Vector PDF**: Rendered natively via `jsPDF` vector paths and typography routines (file size ~**12–18 KB**, instant download).
+- **Contents**:
+  - Brand header (`Luxe Craft`), timestamp, user role, and unique `Batch Reference ID`.
+  - Itemized table of ordered jewelry items (SKUs, Colors, Piece Quantities).
+  - Total Batch Order Cost (redacted for Managers, visible to Owner).
+  - Detailed Raw Material Deductions Table:
+    - Material Name & Color
+    - Deducted Units
+    - Packets Needed (`X pkts (Y loose)`)
+    - Stock Before (`X pkts (Y loose)`)
+    - Stock After (`A pkts (B loose)`)
+    - Line Cost (Owner only)
+  - Verification footer stamp.
+
+### 7.2 Draft Order Persistence Across Navigation
+- Draft batch items in the Order Book are automatically saved in browser `localStorage` (`luxe_draft_order_items`).
+- Users can switch between tabs (e.g. Raw Materials, Jewelry, Insights, Backup) without losing drafted order items.
+- Provides a **"Clear Draft"** reset action, and automatically clears upon successful order execution.
+
+### 7.3 Batch Grouping & Sequential Order Numbering in History
+- **Sequential Numbering**: Orders in Order History are assigned sequential sequence numbers (**Order #1**, **Order #2**, ... **Order #N**).
+- **Batch Grouping**: Multiple line items sharing a `batch_id` are collapsed into **ONE** grouped Order card.
+- **Card Summary**:
+  - Badge with sequential **`Order #X`**.
+  - Jewelry item tags (`SKU (Color) × Qty`).
+  - Total piece count across all items in the batch.
+  - Placed by role and timestamp.
+  - Single total batch cost (Owner only).
+  - Dropdown view containing itemized jewelry breakdown, raw material deductions ledger with packets needed, and a **"Download Receipt (PDF)"** action.
+
+### 7.4 Smart Autocomplete & Color Suggestions in Order Book
+- **Smart SKU Search**: Typing in the SKU field triggers a real-time suggestions dropdown matching active catalog SKUs.
+- **Color Selection**:
+  - Selecting an SKU automatically populates available color tags from the catalog.
+  - If a SKU has only 1 color variant in the catalog, it is automatically pre-filled into the Color input.

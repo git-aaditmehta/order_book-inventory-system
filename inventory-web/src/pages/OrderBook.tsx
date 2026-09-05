@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { api } from '../api/client';
 import type { OrderItemInput, OrderPreviewResponse, OrderProcessResponse, UserRole } from '../types';
-import { CheckCircle, AlertOctagon, ArrowRight, RefreshCw, Plus, Trash2, Layers, Package } from 'lucide-react';
+import { CheckCircle, AlertOctagon, ArrowRight, RefreshCw, Plus, Trash2, Layers, Package, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 interface OrderBookProps {
   userRole: UserRole;
@@ -18,6 +19,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   
   const [previewData, setPreviewData] = useState<OrderPreviewResponse | null>(null);
   const [successResult, setSuccessResult] = useState<OrderProcessResponse | null>(null);
+  const [lastPreviewMaterials, setLastPreviewMaterials] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleAddItemRow = () => {
@@ -80,6 +82,9 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
         }))
       });
       setPreviewData(res.data);
+      if (res.data?.materials_required) {
+        setLastPreviewMaterials(res.data.materials_required);
+      }
     } catch (err: any) {
       setPreviewData(null);
       setErrorMessage(formatErrorMsg(err.response?.data?.detail));
@@ -95,6 +100,10 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     setErrorMessage(null);
 
     try {
+      if (previewData.materials_required) {
+        setLastPreviewMaterials(previewData.materials_required);
+      }
+
       const res = await api.post('/orders/process', {
         items: orderItems.map(item => ({
           sku_id: item.sku_id.trim(),
@@ -117,6 +126,210 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     setPreviewData(null);
     setSuccessResult(null);
     setErrorMessage(null);
+  };
+
+  // Helper to format packets needed string
+  const formatPacketsNeeded = (units: number, qtyPerPacket: number) => {
+    const qpp = qtyPerPacket || 1;
+    const pkts = Math.floor(units / qpp);
+    const loose = units % qpp;
+    if (pkts > 0) {
+      return `${pkts} pkts${loose > 0 ? ` (${loose} loose)` : ''}`;
+    }
+    return `${loose} loose`;
+  };
+
+  const handleDownloadPDF = () => {
+    if (!successResult) return;
+    const doc = new jsPDF();
+    const now = new Date();
+    const nowStr = now.toLocaleString();
+    const batchId = successResult.batch_id || successResult.order_transaction_id || successResult.id || 'N/A';
+    const items = successResult.items_processed || orderItems || [];
+    const materials = successResult.materials_used || successResult.materials_summary || [];
+
+    // Map for looking up quantity_per_packet and line_cost from preview
+    const previewMap = new Map<string, any>();
+    lastPreviewMaterials.forEach(m => {
+      previewMap.set(`${m.name}_${m.color}`, m);
+      if (m.raw_material_id) previewMap.set(m.raw_material_id, m);
+    });
+
+    // ── Header Section ──
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(168, 138, 82); // Champagne Gold #A88A52
+    doc.text('Luxe Craft', 14, 18);
+
+    doc.setFontSize(10);
+    doc.setTextColor(82, 80, 75);
+    doc.text('BATCH ORDER RECEIPT & STOCK DEDUCTION LEDGER', 14, 25);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated: ${nowStr} | Role: ${userRole}`, 14, 31);
+    doc.text(`Batch Reference ID: ${batchId}`, 14, 36);
+
+    doc.setDrawColor(204, 197, 182);
+    doc.setLineWidth(0.5);
+    doc.line(14, 40, 196, 40);
+
+    let y = 48;
+
+    // ── Section 1: Ordered Jewelry Items ──
+    const totalPieces = items.reduce((acc, it) => acc + (Number(it.order_quantity) || 0), 0);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(23, 24, 23);
+    doc.text(`1. Ordered Jewelry Items (${items.length} items, ${totalPieces} total pieces)`, 14, y);
+
+    y += 6;
+    doc.setFillColor(240, 236, 227);
+    doc.rect(14, y - 4, 182, 7, 'F');
+    doc.setFontSize(8.5);
+    doc.setTextColor(82, 80, 75);
+    doc.text('Item #', 16, y);
+    doc.text('Jewelry SKU', 36, y);
+    doc.text('Color / Variant', 90, y);
+    doc.text('Ordered Quantity', 150, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(23, 24, 23);
+    items.forEach((it, idx) => {
+      doc.text(`${idx + 1}`, 16, y);
+      doc.text(`${it.sku_id || 'N/A'}`, 36, y);
+      doc.text(`${it.color || 'N/A'}`, 90, y);
+      doc.text(`${it.order_quantity || 0} pieces`, 150, y);
+      y += 6;
+    });
+
+    // Total Batch Cost (Owner only)
+    if (userRole === 'OWNER' && successResult.total_order_cost !== null && successResult.total_order_cost !== undefined) {
+      y += 2;
+      doc.setFillColor(224, 217, 203);
+      doc.rect(14, y - 4, 182, 8, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(122, 100, 56);
+      doc.text('Total Batch Order Cost:', 16, y + 1);
+      doc.text(`${successResult.total_order_cost.toFixed(2)}`, 160, y + 1);
+      y += 11;
+    } else {
+      y += 5;
+    }
+
+    // ── Section 2: Raw Materials Deductions ──
+    if (y > 210) {
+      doc.addPage();
+      y = 20;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(23, 24, 23);
+    doc.text(`2. Combined Raw Material Deductions (${materials.length} components)`, 14, y);
+
+    y += 6;
+    // Table Header
+    doc.setFillColor(240, 236, 227);
+    doc.rect(14, y - 4, 182, 7, 'F');
+    doc.setFontSize(7.5);
+    doc.setTextColor(82, 80, 75);
+
+    const isOwner = userRole === 'OWNER';
+    if (isOwner) {
+      doc.text('Raw Material (Color)', 16, y);
+      doc.text('Units', 58, y);
+      doc.text('Packets Needed', 78, y);
+      doc.text('Stock Before', 110, y);
+      doc.text('Stock After', 142, y);
+      doc.text('Line Cost', 172, y);
+    } else {
+      doc.text('Raw Material (Color)', 16, y);
+      doc.text('Units Deducted', 65, y);
+      doc.text('Packets Needed', 95, y);
+      doc.text('Stock Before', 130, y);
+      doc.text('Stock After', 162, y);
+    }
+
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(23, 24, 23);
+    doc.setFontSize(7.5);
+
+    materials.forEach((mat) => {
+      if (y > 275) {
+        doc.addPage();
+        y = 20;
+      }
+
+      const pInfo = previewMap.get(`${mat.name}_${mat.color}`) || previewMap.get(mat.raw_material_id) || {};
+      const qtyPerPkt = mat.quantity_per_packet || pInfo.quantity_per_packet || 1;
+      const unitsUsed = mat.units_used || mat.units_required || 0;
+      const packetsNeededStr = formatPacketsNeeded(unitsUsed, qtyPerPkt);
+
+      const matName = `${mat.name} (${mat.color})`;
+      const beforeStr = mat.stock_before 
+        ? `${mat.stock_before.packets}p (${mat.stock_before.loose}l)` 
+        : (pInfo.packets_current !== undefined ? `${pInfo.packets_current}p (${pInfo.loose_current}l)` : '-');
+      const afterStr = mat.stock_after 
+        ? `${mat.stock_after.packets}p (${mat.stock_after.loose}l)` 
+        : '-';
+
+      const lineCostVal = mat.line_cost !== undefined && mat.line_cost !== null 
+        ? Number(mat.line_cost) 
+        : (pInfo.line_cost !== undefined && pInfo.line_cost !== null ? Number(pInfo.line_cost) : null);
+
+      if (isOwner) {
+        doc.text(matName, 16, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(73, 107, 88); // Forest Green
+        doc.text(`${unitsUsed}`, 58, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(122, 100, 56);
+        doc.text(packetsNeededStr, 78, y);
+        doc.setTextColor(82, 80, 75);
+        doc.text(beforeStr, 110, y);
+        doc.setTextColor(23, 24, 23);
+        doc.text(afterStr, 142, y);
+        doc.setTextColor(122, 100, 56);
+        doc.setFont('helvetica', 'bold');
+        doc.text(lineCostVal !== null ? lineCostVal.toFixed(2) : '-', 172, y);
+      } else {
+        doc.text(matName, 16, y);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(73, 107, 88);
+        doc.text(`${unitsUsed} units`, 65, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(122, 100, 56);
+        doc.text(packetsNeededStr, 95, y);
+        doc.setTextColor(82, 80, 75);
+        doc.text(beforeStr, 130, y);
+        doc.setTextColor(23, 24, 23);
+        doc.text(afterStr, 162, y);
+      }
+
+      y += 6;
+    });
+
+    // ── Verification Footer ──
+    y += 8;
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setDrawColor(204, 197, 182);
+    doc.setLineWidth(0.3);
+    doc.line(14, y, 196, y);
+    y += 5;
+    doc.setFontSize(7.5);
+    doc.setTextColor(140, 140, 140);
+    doc.text('Luxe Craft Automated Inventory Ledger — Atomic Supabase Deduction Verified', 14, y);
+
+    const cleanBatch = String(batchId).slice(0, 8);
+    doc.save(`Order_Receipt_${cleanBatch}_${now.toISOString().slice(0, 10)}.pdf`);
   };
 
   const totalBatchUnits = orderItems.reduce((acc, it) => acc + (Number(it.order_quantity) || 0), 0);
@@ -513,23 +726,50 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                 Combined Raw Material Deductions:
               </span>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
-                {materials.map((mat, i) => (
-                  <div key={i} style={{ backgroundColor: '#FFFFFF', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                    <div style={{ fontWeight: 700, color: '#171817' }}>{mat.name} ({mat.color})</div>
-                    <div style={{ color: '#496B58', fontWeight: 700 }}>Deducted: {mat.units_used} units</div>
-                    {mat.stock_before && mat.stock_after && (
-                      <div style={{ fontSize: '0.75rem', color: '#52504B', borderTop: '1px solid #CCC5B6', paddingTop: '0.25rem', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose)</span>
-                        <ArrowRight style={{ width: 12, height: 12 }} />
-                        <span style={{ fontWeight: 700, color: '#171817' }}>After: {mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</span>
+                {materials.map((mat, i) => {
+                  const pInfo = lastPreviewMaterials.find(m => m.name === mat.name && m.color === mat.color) || {};
+                  const qtyPerPkt = mat.quantity_per_packet || pInfo.quantity_per_packet || 1;
+                  const unitsUsed = mat.units_used || mat.units_required || 0;
+                  const packetsNeededStr = formatPacketsNeeded(unitsUsed, qtyPerPkt);
+
+                  return (
+                    <div key={i} style={{ backgroundColor: '#FFFFFF', border: '1px solid #CCC5B6', borderRadius: '8px', padding: '0.75rem', fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <div style={{ fontWeight: 700, color: '#171817' }}>{mat.name} ({mat.color})</div>
+                      <div style={{ color: '#496B58', fontWeight: 700 }}>Deducted: {mat.units_used} units</div>
+                      <div style={{ color: '#806B3F', fontWeight: 600, fontSize: '0.75rem' }}>
+                        Packets Needed: <strong>{packetsNeededStr}</strong>
                       </div>
-                    )}
-                  </div>
-                ))}
+                      {mat.stock_before && mat.stock_after && (
+                        <div style={{ fontSize: '0.75rem', color: '#52504B', borderTop: '1px solid #CCC5B6', paddingTop: '0.25rem', marginTop: '0.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Before: {mat.stock_before.packets} pkts ({mat.stock_before.loose} loose)</span>
+                          <ArrowRight style={{ width: 12, height: 12 }} />
+                          <span style={{ fontWeight: 700, color: '#171817' }}>After: {mat.stock_after.packets} pkts ({mat.stock_after.loose} loose)</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div style={{ paddingTop: '0.5rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center', paddingTop: '0.5rem' }}>
+              <button
+                onClick={handleDownloadPDF}
+                className="pj-btn-primary"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  padding: '0.625rem 1.25rem',
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  backgroundColor: '#A88A52'
+                }}
+              >
+                <FileText style={{ width: 16, height: 16 }} />
+                <span>Download Order Receipt (PDF)</span>
+              </button>
+
               <button onClick={handleReset} className="pj-btn-add">
                 Place Next Batch Order
               </button>

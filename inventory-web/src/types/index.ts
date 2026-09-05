@@ -42,6 +42,10 @@ export interface MaterialUsageSnapshot {
   name: string;
   color: string;
   units_used: number;
+  quantity_per_packet?: number;
+  units_required?: number;
+  packets_deducted?: number;
+  loose_deducted?: number;
   stock_before: { packets: number; loose: number; total_units: number };
   stock_after: { packets: number; loose: number; total_units: number };
   line_cost?: number | null; // Null for Manager

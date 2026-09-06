@@ -54,7 +54,7 @@ export interface MaterialUsageSnapshot {
 export interface OrderItemInput {
   sku_id: string;
   color: string;
-  order_quantity: number;
+  order_quantity: number | '';
 }
 
 export interface BatchItemSummary {

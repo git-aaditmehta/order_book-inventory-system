@@ -15,6 +15,7 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
   const queryClient = useQueryClient();
   const [searchSku, setSearchSku] = useState('');
   const [searchColor, setSearchColor] = useState('');
+  const [focusedSearch, setFocusedSearch] = useState<'sku' | 'color' | null>(null);
 
   // Modal states
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -28,14 +29,15 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
   const [weightAfter, setWeightAfter] = useState<number | ''>(0);
   
   // Recipe form array: [{ raw_material_id, required_quantity }]
-  const [recipeInputs, setRecipeInputs] = useState<Array<{ raw_material_id: string; required_quantity: number }>>([
-    { raw_material_id: '', required_quantity: 1 }
+  // Default is blank on frontend, defaults to 1 on submit if untouched
+  const [recipeInputs, setRecipeInputs] = useState<Array<{ raw_material_id: string; required_quantity: number | '' }>>([
+    { raw_material_id: '', required_quantity: '' }
   ]);
 
   const { data: jewelryList = [], isLoading: loadingJewelry } = useQuery<Jewelry[]>({
-    queryKey: ['jewelry', searchSku, searchColor],
+    queryKey: ['jewelry'],
     queryFn: async () => {
-      const res = await api.get('/jewelry', { params: { sku_id: searchSku, color: searchColor } });
+      const res = await api.get('/jewelry');
       return res.data || [];
     },
   });
@@ -50,9 +52,33 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
 
   const loading = loadingJewelry || loadingMaterials;
 
+  // Instant client-side filtering (0ms latency as you type initials)
+  const filteredJewelry = jewelryList.filter((j) => {
+    const matchSku = !searchSku.trim() || j.sku_id.toLowerCase().includes(searchSku.toLowerCase().trim());
+    const matchColor = !searchColor.trim() || j.color.toLowerCase().includes(searchColor.toLowerCase().trim());
+    return matchSku && matchColor;
+  });
+
+  // Smart suggestions for SKU based on initials typed
+  const matchingSkuSuggestions = Array.from(
+    new Set(
+      jewelryList
+        .filter(j => searchSku.trim() && j.sku_id.toLowerCase().includes(searchSku.toLowerCase().trim()))
+        .map(j => j.sku_id.trim())
+    )
+  ).slice(0, 8);
+
+  // Smart suggestions for Color based on initials typed
+  const matchingColorSuggestions = Array.from(
+    new Set(
+      jewelryList
+        .filter(j => searchColor.trim() && j.color.toLowerCase().includes(searchColor.toLowerCase().trim()))
+        .map(j => j.color.trim())
+    )
+  ).slice(0, 8);
 
   const handleAddRecipeRow = () => {
-    setRecipeInputs([...recipeInputs, { raw_material_id: '', required_quantity: 1 }]);
+    setRecipeInputs([...recipeInputs, { raw_material_id: '', required_quantity: '' }]);
   };
 
   const handleRemoveRecipeRow = (index: number) => {
@@ -67,7 +93,13 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validRecipes = recipeInputs.filter(r => r.raw_material_id && r.required_quantity > 0);
+    const validRecipes = recipeInputs
+      .filter(r => r.raw_material_id)
+      .map(r => ({
+        raw_material_id: r.raw_material_id,
+        required_quantity: r.required_quantity === '' || !r.required_quantity ? 1 : Number(r.required_quantity)
+      }));
+
     if (validRecipes.length === 0) {
       alert('Please add at least one valid raw material recipe.');
       return;
@@ -93,7 +125,12 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     e.preventDefault();
     if (!selectedJewelry) return;
 
-    const validRecipes = recipeInputs.filter(r => r.raw_material_id && r.required_quantity > 0);
+    const validRecipes = recipeInputs
+      .filter(r => r.raw_material_id)
+      .map(r => ({
+        raw_material_id: r.raw_material_id,
+        required_quantity: r.required_quantity === '' || !r.required_quantity ? 1 : Number(r.required_quantity)
+      }));
 
     try {
       await api.put(`/jewelry/${selectedJewelry.id}`, {
@@ -119,7 +156,6 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     }
   };
 
-
   const openEditModal = (j: Jewelry) => {
     setSelectedJewelry(j);
     setSkuId(j.sku_id);
@@ -135,9 +171,10 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     setColor('');
     setWeightBefore(0);
     setWeightAfter(0);
-    setRecipeInputs([{ raw_material_id: '', required_quantity: 1 }]);
+    setRecipeInputs([{ raw_material_id: '', required_quantity: '' }]);
     setSelectedJewelry(null);
   };
+
 
   // Helper to calculate total BOM recipe cost for an item
   const calculateTotalCost = (j: Jewelry): number | null => {
@@ -172,9 +209,10 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="pj-search-box">
+      <div className="pj-search-box" style={{ position: 'relative', zIndex: 30 }}>
         <div className="search-grid">
-          <div style={{ position: 'relative' }}>
+          {/* SKU Search with Smart Autocomplete */}
+          <div style={{ position: 'relative', zIndex: focusedSearch === 'sku' ? 35 : 1 }}>
             <Search style={{
               position: 'absolute',
               left: '0.875rem',
@@ -190,10 +228,60 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
               placeholder="Search by SKU ID (e.g. J-101)…"
               value={searchSku}
               onChange={(e) => setSearchSku(e.target.value)}
+              onFocus={() => setFocusedSearch('sku')}
+              onBlur={() => setTimeout(() => setFocusedSearch(null), 250)}
               className="pj-input"
+              autoComplete="off"
             />
+
+            {/* Smart Suggestions Dropdown for SKU */}
+            {focusedSearch === 'sku' && matchingSkuSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CCC5B6',
+                borderRadius: '8px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
+                zIndex: 100,
+                maxHeight: '220px',
+                overflowY: 'auto',
+                marginTop: '4px'
+              }}>
+                {matchingSkuSuggestions.map((sku) => {
+                  const colors = Array.from(new Set(jewelryList.filter(j => j.sku_id.toLowerCase() === sku.toLowerCase()).map(j => j.color)));
+                  return (
+                    <div
+                      key={sku}
+                      onMouseDown={() => {
+                        setSearchSku(sku);
+                        setFocusedSearch(null);
+                      }}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.8125rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderBottom: '1px solid #F0ECE3'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F5F0E6'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                    >
+                      <span style={{ fontWeight: 700, color: '#171817' }}>{sku}</span>
+                      <span style={{ fontSize: '0.6875rem', color: '#7A6438' }}>{colors.join(', ')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <div style={{ position: 'relative' }}>
+
+          {/* Color Filter with Smart Autocomplete */}
+          <div style={{ position: 'relative', zIndex: focusedSearch === 'color' ? 35 : 1 }}>
             <Search style={{
               position: 'absolute',
               left: '0.875rem',
@@ -209,8 +297,52 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
               placeholder="Filter by color…"
               value={searchColor}
               onChange={(e) => setSearchColor(e.target.value)}
+              onFocus={() => setFocusedSearch('color')}
+              onBlur={() => setTimeout(() => setFocusedSearch(null), 250)}
               className="pj-input"
+              autoComplete="off"
             />
+
+            {/* Smart Suggestions Dropdown for Color */}
+            {focusedSearch === 'color' && matchingColorSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CCC5B6',
+                borderRadius: '8px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
+                zIndex: 100,
+                maxHeight: '200px',
+                overflowY: 'auto',
+                marginTop: '4px'
+              }}>
+                {matchingColorSuggestions.map((col) => (
+                  <div
+                    key={col}
+                    onMouseDown={() => {
+                      setSearchColor(col);
+                      setFocusedSearch(null);
+                    }}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderBottom: '1px solid #F0ECE3'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F5F0E6'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                  >
+                    <span style={{ fontWeight: 600, color: '#171817' }}>{col}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -221,7 +353,7 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
           <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
           <span style={{ fontSize: '0.875rem', color: '#52504B' }}>Loading master catalog…</span>
         </div>
-      ) : jewelryList.length === 0 ? (
+      ) : filteredJewelry.length === 0 ? (
         <div style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #CCC5B6',
@@ -239,8 +371,9 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
         </div>
       ) : (
         <div className="material-grid">
-          {jewelryList.map((j) => (
+          {filteredJewelry.map((j) => (
             <JewelryCard
+
               key={j.id}
               j={j}
               userRole={userRole}
@@ -325,13 +458,14 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
                           <input
                             type="number"
                             min="1"
-                            value={row.required_quantity}
-                            onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
+                            placeholder="1"
+                            value={row.required_quantity === '' ? '' : row.required_quantity}
+                            onChange={e => handleRecipeChange(idx, 'required_quantity', e.target.value === '' ? '' : (parseInt(e.target.value) || ''))}
                             className="pj-input"
                             style={{ paddingLeft: '0.5rem', textAlign: 'center', height: '38px', fontSize: '0.8125rem', fontWeight: 700 }}
-                            required
                           />
                         </div>
+
 
                         {recipeInputs.length > 1 && (
                           <button
@@ -428,13 +562,14 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
                           <input
                             type="number"
                             min="1"
-                            value={row.required_quantity}
-                            onChange={e => handleRecipeChange(idx, 'required_quantity', parseInt(e.target.value) || 1)}
+                            placeholder="1"
+                            value={row.required_quantity === '' ? '' : row.required_quantity}
+                            onChange={e => handleRecipeChange(idx, 'required_quantity', e.target.value === '' ? '' : (parseInt(e.target.value) || ''))}
                             className="pj-input"
                             style={{ paddingLeft: '0.5rem', textAlign: 'center', height: '38px', fontSize: '0.8125rem', fontWeight: 700 }}
-                            required
                           />
                         </div>
+
 
                         {recipeInputs.length > 1 && (
                           <button

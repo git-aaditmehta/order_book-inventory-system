@@ -94,18 +94,22 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     
     // Cleanse & validate items: filter out completely empty/whitespace items
     const nonBlankItems = orderItems.filter(
-      item => item.sku_id.trim() || item.color.trim() || item.order_quantity
+      item => item.sku_id.trim() || item.color.trim() || (item.order_quantity !== '' && Number(item.order_quantity) > 0)
     );
 
     if (nonBlankItems.length === 0) {
-      setErrorMessage('Please enter at least one jewelry SKU, color, and quantity.');
+      setErrorMessage('Please enter at least one jewelry SKU and color.');
       return;
     }
 
     for (let i = 0; i < nonBlankItems.length; i++) {
       const item = nonBlankItems[i];
-      if (!item.sku_id.trim() || !item.color.trim() || !item.order_quantity || item.order_quantity <= 0) {
-        setErrorMessage(`Please fill out valid SKU ID, Color, and Quantity for Item #${i + 1}.`);
+      if (!item.sku_id.trim() || !item.color.trim()) {
+        setErrorMessage(`Please fill out valid SKU ID and Color for Item #${i + 1}.`);
+        return;
+      }
+      if (item.order_quantity !== '' && Number(item.order_quantity) <= 0) {
+        setErrorMessage(`Quantity must be 1 or more for Item #${i + 1}.`);
         return;
       }
     }
@@ -117,7 +121,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     const validPayloadItems = nonBlankItems.map(item => ({
       sku_id: item.sku_id.trim(),
       color: item.color.trim(),
-      order_quantity: Math.max(1, Number(item.order_quantity) || 1)
+      order_quantity: item.order_quantity === '' || !item.order_quantity ? 1 : Math.max(1, Number(item.order_quantity) || 1)
     }));
 
     const first = validPayloadItems[0];
@@ -150,11 +154,11 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     setErrorMessage(null);
 
     const validPayloadItems = orderItems
-      .filter(item => item.sku_id.trim() && item.color.trim() && item.order_quantity > 0)
+      .filter(item => item.sku_id.trim() && item.color.trim())
       .map(item => ({
         sku_id: item.sku_id.trim(),
         color: item.color.trim(),
-        order_quantity: Math.max(1, Number(item.order_quantity) || 1)
+        order_quantity: item.order_quantity === '' || !item.order_quantity ? 1 : Math.max(1, Number(item.order_quantity) || 1)
       }));
 
     if (validPayloadItems.length === 0) {
@@ -405,7 +409,11 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     doc.save(`Order_Receipt_${cleanBatch}_${now.toISOString().slice(0, 10)}.pdf`);
   };
 
-  const totalBatchUnits = orderItems.reduce((acc, it) => acc + (Number(it.order_quantity) || 0), 0);
+  const totalBatchUnits = orderItems.reduce((acc, it) => {
+    if (!it.sku_id.trim() && !it.color.trim() && it.order_quantity === '') return acc;
+    const qty = it.order_quantity === '' || !it.order_quantity ? 1 : Number(it.order_quantity);
+    return acc + qty;
+  }, 0);
 
   return (
     <div className="precision-jewelry-page space-y-6">
@@ -484,7 +492,8 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                     flexDirection: 'column',
                     gap: '0.75rem',
                     boxShadow: '0 1px 3px rgba(23, 24, 23, 0.02)',
-                    position: 'relative'
+                    position: 'relative',
+                    zIndex: focusedSkuIdx === idx ? 40 : 1
                   }}
                 >
                   <div style={{
@@ -494,7 +503,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                     alignItems: 'flex-start'
                   }}>
                     {/* SKU ID Input with Smart Autocomplete */}
-                    <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'relative', zIndex: focusedSkuIdx === idx ? 50 : 1 }}>
                       <label className="pj-form-label" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Search style={{ width: 11, height: 11, color: '#A88A52' }} /> Jewelry #{idx + 1} SKU ID *
                       </label>
@@ -521,8 +530,8 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                           backgroundColor: '#FFFFFF',
                           border: '1px solid #CCC5B6',
                           borderRadius: '8px',
-                          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-                          zIndex: 50,
+                          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
+                          zIndex: 100,
                           maxHeight: '180px',
                           overflowY: 'auto',
                           marginTop: '4px'
@@ -547,7 +556,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                               >
                                 <span style={{ fontWeight: 700, color: '#171817' }}>{skuOption}</span>
                                 <span style={{ fontSize: '0.6875rem', color: '#7A6438' }}>
-                                  {colors.join(', ')}
+                                   {colors.join(', ')}
                                 </span>
                               </div>
                             );
@@ -601,16 +610,16 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                     {/* Quantity Input */}
                     <div>
                       <label className="pj-form-label" style={{ fontSize: '0.6875rem' }}>
-                        Quantity (Pieces) *
+                        Quantity (Pieces)
                       </label>
                       <input
                         type="number"
                         min="1"
-                        value={item.order_quantity}
-                        onChange={(e) => handleItemChange(idx, 'order_quantity', e.target.value ? parseInt(e.target.value) : '')}
+                        placeholder="1"
+                        value={item.order_quantity === '' ? '' : item.order_quantity}
+                        onChange={(e) => handleItemChange(idx, 'order_quantity', e.target.value === '' ? '' : (parseInt(e.target.value) || ''))}
                         className="pj-input"
                         style={{ paddingLeft: '0.875rem', fontWeight: 700, height: '40px' }}
-                        required
                       />
                     </div>
 

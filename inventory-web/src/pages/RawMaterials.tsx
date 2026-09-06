@@ -15,6 +15,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
   const queryClient = useQueryClient();
   const [searchName, setSearchName] = useState('');
   const [searchColor, setSearchColor] = useState('');
+  const [focusedSearch, setFocusedSearch] = useState<'name' | 'color' | null>(null);
 
   // Modals state
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -38,15 +39,38 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
   const [addLoose, setAddLoose] = useState<number | ''>(0);
 
   const { data: materials = [], isLoading: loading } = useQuery<RawMaterial[]>({
-    queryKey: ['raw-materials', searchName, searchColor],
+    queryKey: ['raw-materials'],
     queryFn: async () => {
-      const params: any = {};
-      if (searchName) params.search = searchName;
-      if (searchColor) params.color = searchColor;
-      const res = await api.get('/raw-materials', { params });
-      return res.data;
+      const res = await api.get('/raw-materials');
+      return res.data || [];
     },
   });
+
+  // Instant client-side filtering (0ms latency as you type initials)
+  const filteredMaterials = materials.filter((m) => {
+    const matchName = !searchName.trim() || m.name.toLowerCase().includes(searchName.toLowerCase().trim());
+    const matchColor = !searchColor.trim() || m.color.toLowerCase().includes(searchColor.toLowerCase().trim());
+    return matchName && matchColor;
+  });
+
+  // Smart suggestions for Material Name based on initials typed
+  const matchingNameSuggestions = Array.from(
+    new Set(
+      materials
+        .filter(m => searchName.trim() && m.name.toLowerCase().includes(searchName.toLowerCase().trim()))
+        .map(m => m.name.trim())
+    )
+  ).slice(0, 8);
+
+  // Smart suggestions for Material Color based on initials typed
+  const matchingColorSuggestions = Array.from(
+    new Set(
+      materials
+        .filter(m => searchColor.trim() && m.color.toLowerCase().includes(searchColor.toLowerCase().trim()))
+        .map(m => m.color.trim())
+    )
+  ).slice(0, 8);
+
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,10 +219,10 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="pj-search-box">
+      <div className="pj-search-box" style={{ position: 'relative', zIndex: 30 }}>
         <div className="search-grid">
-          {/* Name Search */}
-          <div style={{ position: 'relative' }}>
+          {/* Name Search with Smart Autocomplete */}
+          <div style={{ position: 'relative', zIndex: focusedSearch === 'name' ? 35 : 1 }}>
             <Search style={{
               position: 'absolute',
               left: '0.875rem',
@@ -215,11 +239,60 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
               placeholder="Search by material name…"
               value={searchName}
               onChange={(e) => setSearchName(e.target.value)}
+              onFocus={() => setFocusedSearch('name')}
+              onBlur={() => setTimeout(() => setFocusedSearch(null), 250)}
               className="pj-input"
+              autoComplete="off"
             />
+
+            {/* Smart Suggestions Dropdown for Material Name */}
+            {focusedSearch === 'name' && matchingNameSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CCC5B6',
+                borderRadius: '8px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
+                zIndex: 100,
+                maxHeight: '220px',
+                overflowY: 'auto',
+                marginTop: '4px'
+              }}>
+                {matchingNameSuggestions.map((name) => {
+                  const matchingColors = Array.from(new Set(materials.filter(m => m.name.toLowerCase() === name.toLowerCase()).map(m => m.color))).slice(0, 3);
+                  return (
+                    <div
+                      key={name}
+                      onMouseDown={() => {
+                        setSearchName(name);
+                        setFocusedSearch(null);
+                      }}
+                      style={{
+                        padding: '0.5rem 0.75rem',
+                        fontSize: '0.8125rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        borderBottom: '1px solid #F0ECE3'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F5F0E6'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                    >
+                      <span style={{ fontWeight: 700, color: '#171817' }}>{name}</span>
+                      <span style={{ fontSize: '0.6875rem', color: '#7A6438' }}>{matchingColors.join(', ')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          {/* Color Filter */}
-          <div style={{ position: 'relative' }}>
+
+          {/* Color Filter with Smart Autocomplete */}
+          <div style={{ position: 'relative', zIndex: focusedSearch === 'color' ? 35 : 1 }}>
             <Search style={{
               position: 'absolute',
               left: '0.875rem',
@@ -236,8 +309,52 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
               placeholder="Filter by color…"
               value={searchColor}
               onChange={(e) => setSearchColor(e.target.value)}
+              onFocus={() => setFocusedSearch('color')}
+              onBlur={() => setTimeout(() => setFocusedSearch(null), 250)}
               className="pj-input"
+              autoComplete="off"
             />
+
+            {/* Smart Suggestions Dropdown for Color */}
+            {focusedSearch === 'color' && matchingColorSuggestions.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#FFFFFF',
+                border: '1px solid #CCC5B6',
+                borderRadius: '8px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
+                zIndex: 100,
+                maxHeight: '200px',
+                overflowY: 'auto',
+                marginTop: '4px'
+              }}>
+                {matchingColorSuggestions.map((col) => (
+                  <div
+                    key={col}
+                    onMouseDown={() => {
+                      setSearchColor(col);
+                      setFocusedSearch(null);
+                    }}
+                    style={{
+                      padding: '0.5rem 0.75rem',
+                      fontSize: '0.8125rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderBottom: '1px solid #F0ECE3'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F5F0E6'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; }}
+                  >
+                    <span style={{ fontWeight: 600, color: '#171817' }}>{col}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -248,7 +365,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
           <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
           <span style={{ fontSize: '0.875rem', color: '#66645F' }}>Loading materials ledger…</span>
         </div>
-      ) : materials.length === 0 ? (
+      ) : filteredMaterials.length === 0 ? (
         <div style={{
           backgroundColor: '#FFFFFF',
           border: '1px solid #E4E0D7',
@@ -266,8 +383,9 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
         </div>
       ) : (
         <div className="material-grid">
-          {materials.map((mat) => (
+          {filteredMaterials.map((mat) => (
             <MaterialCard
+
               key={mat.id}
               mat={mat}
               userRole={userRole}

@@ -13,14 +13,14 @@ function getInitialDraftItems(): OrderItemInput[] {
         return parsed.map(item => ({
           sku_id: String(item.sku_id || ''),
           color: String(item.color || ''),
-          order_quantity: Number(item.order_quantity) || 1
+          order_quantity: item.order_quantity === '' || item.order_quantity === undefined ? '' : (Number(item.order_quantity) || '')
         }));
       }
     }
   } catch (e) {
     console.error('Failed to parse draft order items from storage:', e);
   }
-  return [{ sku_id: '', color: '', order_quantity: 1 }];
+  return [{ sku_id: '', color: '', order_quantity: '' }];
 }
 
 interface OrderCartState {
@@ -60,7 +60,7 @@ export const useOrderCartStore = create<OrderCartState>((set, get) => ({
 
   addItemRow: () => {
     const current = get().orderItems;
-    const next = [...current, { sku_id: '', color: '', order_quantity: 1 }];
+    const next: OrderItemInput[] = [...current, { sku_id: '', color: '', order_quantity: '' }];
     get().setOrderItems(next);
   },
 
@@ -85,7 +85,7 @@ export const useOrderCartStore = create<OrderCartState>((set, get) => ({
   setErrorMessage: (msg) => set({ errorMessage: msg }),
 
   resetCart: () => {
-    const empty = [{ sku_id: '', color: '', order_quantity: 1 }];
+    const empty: OrderItemInput[] = [{ sku_id: '', color: '', order_quantity: '' }];
     set({
       orderItems: empty,
       previewData: null,

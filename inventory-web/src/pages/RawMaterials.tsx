@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { RawMaterial, UserRole } from '../types';
 import { 
@@ -11,8 +12,7 @@ interface RawMaterialsProps {
 }
 
 export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
-  const [materials, setMaterials] = useState<RawMaterial[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchName, setSearchName] = useState('');
   const [searchColor, setSearchColor] = useState('');
 
@@ -37,24 +37,16 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
   const [addPackets, setAddPackets] = useState<number | ''>(0);
   const [addLoose, setAddLoose] = useState<number | ''>(0);
 
-  const fetchMaterials = async () => {
-    setLoading(true);
-    try {
+  const { data: materials = [], isLoading: loading } = useQuery<RawMaterial[]>({
+    queryKey: ['raw-materials', searchName, searchColor],
+    queryFn: async () => {
       const params: any = {};
       if (searchName) params.search = searchName;
       if (searchColor) params.color = searchColor;
       const res = await api.get('/raw-materials', { params });
-      setMaterials(res.data);
-    } catch (err: any) {
-      console.error('Failed to load raw materials:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMaterials();
-  }, [searchName, searchColor]);
+      return res.data;
+    },
+  });
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +61,8 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
       });
       setAddModalOpen(false);
       resetForm();
-      fetchMaterials();
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to create raw material.');
     }
@@ -89,7 +82,8 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
       });
       setEditModalOpen(false);
       resetForm();
-      fetchMaterials();
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to update raw material.');
     }
@@ -106,7 +100,8 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
       setRestockModalOpen(false);
       setAddPackets(0);
       setAddLoose(0);
-      fetchMaterials();
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
     } catch (err: any) {
       alert('Failed to restock raw material.');
     }
@@ -116,11 +111,13 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
     if (!confirm(`Archive raw material "${mat.name} (${mat.color})"?`)) return;
     try {
       await api.delete(`/raw-materials/${mat.id}`);
-      fetchMaterials();
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
     } catch (err: any) {
       alert('Failed to delete raw material.');
     }
   };
+
 
   const handleOpenHistory = async (mat: RawMaterial) => {
     setSelectedMaterial(mat);

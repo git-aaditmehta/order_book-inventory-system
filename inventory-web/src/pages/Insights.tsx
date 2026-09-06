@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { InsightsSummary, UserRole } from '../types';
 import { Download, Calendar, RefreshCw, Layers } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import jsPDF from 'jspdf';
 
 interface InsightsProps {
   userRole: UserRole;
@@ -13,34 +13,25 @@ export const Insights: React.FC<InsightsProps> = () => {
   const [period, setPeriod] = useState<'7d' | '30d' | 'custom'>('7d');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [summary, setSummary] = useState<InsightsSummary | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const fetchInsights = async () => {
-    setLoading(true);
-    try {
+  const { data: summary = null, isLoading: loading } = useQuery<InsightsSummary | null>({
+    queryKey: ['insights', period, startDate, endDate],
+    queryFn: async () => {
       const params: any = { period };
       if (period === 'custom') {
         if (startDate) params.start_date = startDate;
         if (endDate) params.end_date = endDate;
       }
       const res = await api.get('/insights/summary', { params });
-      setSummary(res.data);
-    } catch (err) {
-      console.error('Failed to load insights summary:', err);
-    } finally {
-      setLoading(false);
+      return res.data;
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchInsights();
-  }, [period, startDate, endDate]);
-
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!summary) return;
-
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
+
     const nowStr = new Date().toLocaleString();
 
     // Header Title

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { Jewelry, RawMaterial, UserRole } from '../types';
 import { 
@@ -11,9 +12,7 @@ interface JewelryCatalogProps {
 }
 
 export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
-  const [jewelryList, setJewelryList] = useState<Jewelry[]>([]);
-  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchSku, setSearchSku] = useState('');
   const [searchColor, setSearchColor] = useState('');
 
@@ -33,25 +32,24 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     { raw_material_id: '', required_quantity: 1 }
   ]);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [jRes, rmRes] = await Promise.all([
-        api.get('/jewelry', { params: { sku_id: searchSku, color: searchColor } }),
-        api.get('/raw-materials')
-      ]);
-      setJewelryList(jRes.data);
-      setRawMaterials(rmRes.data);
-    } catch (err: any) {
-      console.error('Failed to load catalog data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: jewelryList = [], isLoading: loadingJewelry } = useQuery<Jewelry[]>({
+    queryKey: ['jewelry', searchSku, searchColor],
+    queryFn: async () => {
+      const res = await api.get('/jewelry', { params: { sku_id: searchSku, color: searchColor } });
+      return res.data || [];
+    },
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [searchSku, searchColor]);
+  const { data: rawMaterials = [], isLoading: loadingMaterials } = useQuery<RawMaterial[]>({
+    queryKey: ['raw-materials'],
+    queryFn: async () => {
+      const res = await api.get('/raw-materials');
+      return res.data || [];
+    },
+  });
+
+  const loading = loadingJewelry || loadingMaterials;
+
 
   const handleAddRecipeRow = () => {
     setRecipeInputs([...recipeInputs, { raw_material_id: '', required_quantity: 1 }]);
@@ -85,7 +83,7 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
       });
       setAddModalOpen(false);
       resetForm();
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['jewelry'] });
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Failed to create jewelry item.');
     }
@@ -105,7 +103,7 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
       });
       setEditModalOpen(false);
       resetForm();
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['jewelry'] });
     } catch (err: any) {
       alert('Failed to update jewelry item.');
     }
@@ -115,11 +113,12 @@ export const JewelryCatalog: React.FC<JewelryCatalogProps> = ({ userRole }) => {
     if (!confirm(`Archive jewelry "${j.sku_id} (${j.color})"?`)) return;
     try {
       await api.delete(`/jewelry/${j.id}`);
-      fetchData();
+      queryClient.invalidateQueries({ queryKey: ['jewelry'] });
     } catch (err) {
       alert('Failed to archive jewelry item.');
     }
   };
+
 
   const openEditModal = (j: Jewelry) => {
     setSelectedJewelry(j);

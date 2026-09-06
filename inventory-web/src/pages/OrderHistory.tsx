@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { OrderTransaction, UserRole, MaterialUsageSnapshot } from '../types';
 import { 
   History, Search, RefreshCw, Layers, ChevronDown, ChevronUp, 
   Package, FileText 
 } from 'lucide-react';
-import jsPDF from 'jspdf';
 
 interface OrderHistoryProps {
   userRole: UserRole;
@@ -23,14 +23,11 @@ export interface GroupedBatchOrder {
 }
 
 export const OrderHistory: React.FC<OrderHistoryProps> = ({ userRole }) => {
-  const [groupedOrders, setGroupedOrders] = useState<GroupedBatchOrder[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchSku, setSearchSku] = useState('');
 
-  const fetchHistory = async () => {
-    setLoading(true);
-    try {
-      // Fetch history records (fetching up to 200 to group batches properly)
+  const { data: groupedOrders = [], isLoading: loading, refetch: fetchHistory } = useQuery<GroupedBatchOrder[]>({
+    queryKey: ['order-history'],
+    queryFn: async () => {
       const res = await api.get('/orders/history', { params: { limit: 200 } });
       const rawTransactions: OrderTransaction[] = res.data || [];
 
@@ -92,17 +89,10 @@ export const OrderHistory: React.FC<OrderHistoryProps> = ({ userRole }) => {
       }));
 
       // Reverse so newest order appears at the top
-      setGroupedOrders(numbered.reverse());
-    } catch (err) {
-      console.error('Failed to load transaction history:', err);
-    } finally {
-      setLoading(false);
+      return numbered.reverse();
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
 
   // Filter grouped orders based on searchSku query
   const filteredOrders = groupedOrders.filter((order) => {
@@ -131,8 +121,9 @@ export const OrderHistory: React.FC<OrderHistoryProps> = ({ userRole }) => {
         </div>
 
         <button
-          onClick={fetchHistory}
+          onClick={() => { fetchHistory(); }}
           disabled={loading}
+
           className="pj-action-btn-ghost"
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem' }}
           title="Refresh transaction history"
@@ -219,9 +210,11 @@ const BatchOrderCard: React.FC<BatchOrderCardProps> = ({ order, userRole }) => {
     return `${loose} loose`;
   };
 
-  const handleDownloadPDF = (e: React.MouseEvent) => {
+  const handleDownloadPDF = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
+
     const nowStr = new Date(order.createdAt).toLocaleString();
     const batchId = order.batchId || 'N/A';
     const items = order.jewelryItems;

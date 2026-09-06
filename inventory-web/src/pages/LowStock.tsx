@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { RawMaterial, UserRole } from '../types';
 import { AlertTriangle, RefreshCw, Sliders, CheckCircle2 } from 'lucide-react';
@@ -8,31 +9,22 @@ interface LowStockProps {
 }
 
 export const LowStock: React.FC<LowStockProps> = () => {
-  const [materials, setMaterials] = useState<RawMaterial[]>([]);
-  const [loading, setLoading] = useState(true);
   const [thresholdType, setThresholdType] = useState<'packets' | 'units'>('packets');
   const [thresholdValue, setThresholdValue] = useState<number>(5);
 
-  const fetchLowStock = async () => {
-    setLoading(true);
-    try {
+  const { data: materials = [], isLoading: loading } = useQuery<RawMaterial[]>({
+    queryKey: ['low-stock', thresholdType, thresholdValue],
+    queryFn: async () => {
       const res = await api.get('/low-stock', {
         params: {
           threshold_type: thresholdType,
           threshold_value: thresholdValue
         }
       });
-      setMaterials(res.data);
-    } catch (err) {
-      console.error('Failed to load low stock:', err);
-    } finally {
-      setLoading(false);
+      return res.data;
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchLowStock();
-  }, [thresholdType, thresholdValue]);
 
   return (
     <div className="precision-jewelry-page space-y-6">

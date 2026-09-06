@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { UserRole } from '../types';
 import { 
   Database, Download, FileSpreadsheet, RefreshCw, CheckCircle2, 
   Layers, Package, Gem, History, ShieldAlert, Sparkles 
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 
 interface BackupProps {
   userRole: UserRole;
@@ -23,29 +23,17 @@ interface BackupSummary {
 }
 
 export const Backup: React.FC<BackupProps> = ({ userRole }) => {
-  const [summary, setSummary] = useState<BackupSummary | null>(null);
-  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const fetchSummary = async () => {
-    setLoading(true);
-    setErrorMessage(null);
-    try {
+  const { data: summary = null, isLoading: loading, refetch: fetchSummary } = useQuery<BackupSummary | null>({
+    queryKey: ['backup-summary'],
+    queryFn: async () => {
       const res = await api.get('/backup/summary');
-      setSummary(res.data);
-    } catch (err: any) {
-      console.error('Failed to load backup summary:', err);
-      setErrorMessage(err.response?.data?.detail || 'Failed to connect to Supabase database for backup metrics.');
-    } finally {
-      setLoading(false);
+      return res.data;
     }
-  };
-
-  useEffect(() => {
-    fetchSummary();
-  }, []);
+  });
 
   const getTimestamp = () => {
     const now = new Date();
@@ -53,9 +41,10 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
   };
 
   // Helper to auto-fit worksheet column widths based on content
-  const autoFitColumns = (worksheet: XLSX.WorkSheet, data: any[]) => {
+  const autoFitColumns = (worksheet: any, data: any[]) => {
     if (!data || data.length === 0) return;
     const keys = Object.keys(data[0]);
+
     const colWidths = keys.map(key => {
       let maxLen = key.toString().length;
       data.forEach(row => {
@@ -82,6 +71,7 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
     setExporting('all');
     setErrorMessage(null);
     try {
+      const XLSX = await import('xlsx');
       const res = await api.get('/backup/data');
       const data = res.data;
       const wb = XLSX.utils.book_new();
@@ -189,6 +179,7 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
     setExporting('raw_materials');
     setErrorMessage(null);
     try {
+      const XLSX = await import('xlsx');
       const res = await api.get('/backup/data');
       const data = res.data.raw_materials;
       const wb = XLSX.utils.book_new();
@@ -228,6 +219,7 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
     setExporting('jewelry');
     setErrorMessage(null);
     try {
+      const XLSX = await import('xlsx');
       const res = await api.get('/backup/data');
       const wb = XLSX.utils.book_new();
 
@@ -279,6 +271,7 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
     setExporting('orders');
     setErrorMessage(null);
     try {
+      const XLSX = await import('xlsx');
       const res = await api.get('/backup/data');
       const data = res.data.order_transactions;
       const wb = XLSX.utils.book_new();
@@ -324,8 +317,9 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
           </p>
         </div>
         <button
-          onClick={fetchSummary}
+          onClick={() => { fetchSummary(); }}
           disabled={loading}
+
           className="pj-action-btn-ghost"
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 0.875rem' }}
           title="Refresh database statistics"

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { UserRole } from '../types';
 import { Shield, Smartphone, Globe, RefreshCw, Key } from 'lucide-react';
@@ -8,24 +9,14 @@ interface SecurityProps {
 }
 
 export const SecurityDashboard: React.FC<SecurityProps> = () => {
-  const [sessionData, setSessionData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchSessions = async () => {
-    setLoading(true);
-    try {
+  const { data: sessionData = null, isLoading: loading } = useQuery<any>({
+    queryKey: ['security-sessions'],
+    queryFn: async () => {
       const res = await api.get('/security/sessions');
-      setSessionData(res.data);
-    } catch (err) {
-      console.error('Failed to load security sessions:', err);
-    } finally {
-      setLoading(false);
+      return res.data;
     }
-  };
+  });
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
 
   return (
     <div className="precision-jewelry-page space-y-6">

@@ -1,17 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
-import { OrderBook } from './pages/OrderBook';
-import { RawMaterials } from './pages/RawMaterials';
-import { JewelryCatalog } from './pages/JewelryCatalog';
-import { OrderHistory } from './pages/OrderHistory';
-import { LowStock } from './pages/LowStock';
-import { Insights } from './pages/Insights';
-import { Backup } from './pages/Backup';
-import { SecurityDashboard } from './pages/SecurityDashboard';
 import { api } from './api/client';
 import type { UserRole } from './types';
+
+// Code-split pages for instant initial bundle loading
+const OrderBook = lazy(() => import('./pages/OrderBook').then(m => ({ default: m.OrderBook })));
+const RawMaterials = lazy(() => import('./pages/RawMaterials').then(m => ({ default: m.RawMaterials })));
+const JewelryCatalog = lazy(() => import('./pages/JewelryCatalog').then(m => ({ default: m.JewelryCatalog })));
+const OrderHistory = lazy(() => import('./pages/OrderHistory').then(m => ({ default: m.OrderHistory })));
+const LowStock = lazy(() => import('./pages/LowStock').then(m => ({ default: m.LowStock })));
+const Insights = lazy(() => import('./pages/Insights').then(m => ({ default: m.Insights })));
+const Backup = lazy(() => import('./pages/Backup').then(m => ({ default: m.Backup })));
+const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard').then(m => ({ default: m.SecurityDashboard })));
+
+function RouteLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center p-12 min-h-[300px]">
+      <div className="flex flex-col items-center gap-3">
+        <div className="w-8 h-8 rounded-full border-2 border-[#D4AF37] border-t-transparent animate-spin" />
+        <span className="text-xs font-semibold uppercase tracking-widest text-[#71717A]">Loading screen...</span>
+      </div>
+    </div>
+  );
+}
 
 export function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('supabase_token'));
@@ -72,33 +85,36 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout userRole={userRole} userEmail={userEmail} onLogout={handleLogout} />}>
-          <Route index element={<Navigate to="/order-book" replace />} />
-          <Route path="order-book" element={<OrderBook userRole={userRole} />} />
-          <Route path="raw-materials" element={<RawMaterials userRole={userRole} />} />
-          <Route path="jewelry" element={<JewelryCatalog userRole={userRole} />} />
-          <Route path="history" element={<OrderHistory userRole={userRole} />} />
-          <Route path="low-stock" element={<LowStock userRole={userRole} />} />
-          
-          {/* Owner Only Protected Routes */}
-          <Route 
-            path="insights" 
-            element={userRole === 'OWNER' ? <Insights userRole={userRole} /> : <Navigate to="/order-book" replace />} 
-          />
-          <Route 
-            path="backup" 
-            element={userRole === 'OWNER' ? <Backup userRole={userRole} /> : <Navigate to="/order-book" replace />} 
-          />
-          <Route 
-            path="security" 
-            element={userRole === 'OWNER' ? <SecurityDashboard userRole={userRole} /> : <Navigate to="/order-book" replace />} 
-          />
-          <Route path="*" element={<Navigate to="/order-book" replace />} />
-        </Route>
-      </Routes>
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<Layout userRole={userRole} userEmail={userEmail} onLogout={handleLogout} />}>
+            <Route index element={<Navigate to="/order-book" replace />} />
+            <Route path="order-book" element={<OrderBook userRole={userRole} />} />
+            <Route path="raw-materials" element={<RawMaterials userRole={userRole} />} />
+            <Route path="jewelry" element={<JewelryCatalog userRole={userRole} />} />
+            <Route path="history" element={<OrderHistory userRole={userRole} />} />
+            <Route path="low-stock" element={<LowStock userRole={userRole} />} />
+            
+            {/* Owner Only Protected Routes */}
+            <Route 
+              path="insights" 
+              element={userRole === 'OWNER' ? <Insights userRole={userRole} /> : <Navigate to="/order-book" replace />} 
+            />
+            <Route 
+              path="backup" 
+              element={userRole === 'OWNER' ? <Backup userRole={userRole} /> : <Navigate to="/order-book" replace />} 
+            />
+            <Route 
+              path="security" 
+              element={userRole === 'OWNER' ? <SecurityDashboard userRole={userRole} /> : <Navigate to="/order-book" replace />} 
+            />
+            <Route path="*" element={<Navigate to="/order-book" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }
 
 export default App;
+

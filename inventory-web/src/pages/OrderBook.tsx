@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import type { OrderItemInput, OrderPreviewResponse, OrderProcessResponse, UserRole, Jewelry } from '../types';
 import { 
   CheckCircle, AlertOctagon, ArrowRight, RefreshCw, Plus, Trash2, 
   Layers, Package, FileText, Search, Sparkles 
 } from 'lucide-react';
-import jsPDF from 'jspdf';
 
 const DRAFT_STORAGE_KEY = 'luxe_draft_order_items';
 
@@ -14,6 +14,8 @@ interface OrderBookProps {
 }
 
 export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
+  const queryClient = useQueryClient();
+
   // Load initial draft items from localStorage if available
   const [orderItems, setOrderItems] = useState<OrderItemInput[]>(() => {
     try {
@@ -30,7 +32,15 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     return [{ sku_id: '', color: '', order_quantity: 1 }];
   });
 
-  const [jewelryCatalog, setJewelryCatalog] = useState<Jewelry[]>([]);
+  // Cached jewelry catalog for smart autocomplete and color suggestion
+  const { data: jewelryCatalog = [] } = useQuery<Jewelry[]>({
+    queryKey: ['jewelry'],
+    queryFn: async () => {
+      const res = await api.get('/jewelry');
+      return res.data || [];
+    },
+  });
+
   const [focusedSkuIdx, setFocusedSkuIdx] = useState<number | null>(null);
 
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -41,19 +51,6 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   const [lastPreviewMaterials, setLastPreviewMaterials] = useState<any[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch jewelry catalog for smart autocomplete and color suggestion
-  const fetchCatalog = async () => {
-    try {
-      const res = await api.get('/jewelry');
-      setJewelryCatalog(res.data || []);
-    } catch (err) {
-      console.error('Failed to load jewelry catalog for autocomplete:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCatalog();
-  }, []);
 
   // Save draft order items to localStorage whenever they change
   useEffect(() => {
@@ -188,6 +185,12 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
       setSuccessResult(res.data);
       setPreviewData(null);
 
+      // Invalidate relevant query caches so other tabs immediately reflect stock/ledger changes
+      queryClient.invalidateQueries({ queryKey: ['raw-materials'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['order-history'] });
+      queryClient.invalidateQueries({ queryKey: ['insights'] });
+
       // Clear draft on successful order completion
       localStorage.removeItem(DRAFT_STORAGE_KEY);
     } catch (err: any) {
@@ -217,10 +220,12 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     return `${loose} loose`;
   };
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!successResult) return;
+    const { default: jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const now = new Date();
+
     const nowStr = now.toLocaleString();
     const batchId = successResult.batch_id || successResult.order_transaction_id || successResult.id || 'N/A';
     const items = successResult.items_processed || orderItems || [];

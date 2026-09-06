@@ -3,7 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { api } from './api/client';
+import { queryClient } from './api/queryClient';
 import type { UserRole } from './types';
+
 
 // Code-split pages for instant initial bundle loading
 const OrderBook = lazy(() => import('./pages/OrderBook').then(m => ({ default: m.OrderBook })));
@@ -45,6 +47,7 @@ export function App() {
   // Sync role with Supabase database profiles table on load
   useEffect(() => {
     if (token) {
+      // 1. Sync role with Supabase database profiles table
       api.get('/auth/me')
         .then(res => {
           if (res.data?.role) {
@@ -60,8 +63,19 @@ export function App() {
         .catch(() => {
           // Handled by client interceptor
         });
+
+      // 2. Prefetch core inventory datasets on app boot for instant 0-second loading
+      queryClient.prefetchQuery({
+        queryKey: ['jewelry'],
+        queryFn: async () => (await api.get('/jewelry')).data || []
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['raw-materials', '', ''],
+        queryFn: async () => (await api.get('/raw-materials')).data || []
+      });
     }
   }, [token]);
+
 
   const handleLoginSuccess = (role: UserRole, email: string, authToken: string) => {
     setToken(authToken);

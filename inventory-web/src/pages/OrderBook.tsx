@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
-import type { OrderItemInput, OrderPreviewResponse, OrderProcessResponse, UserRole, Jewelry } from '../types';
+import { useOrderCartStore } from '../store/orderCartStore';
+import type { OrderItemInput, UserRole, Jewelry } from '../types';
 import { 
   CheckCircle, AlertOctagon, ArrowRight, RefreshCw, Plus, Trash2, 
   Layers, Package, FileText, Search, Sparkles 
 } from 'lucide-react';
-
-const DRAFT_STORAGE_KEY = 'luxe_draft_order_items';
 
 interface OrderBookProps {
   userRole: UserRole;
@@ -16,21 +15,21 @@ interface OrderBookProps {
 export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   const queryClient = useQueryClient();
 
-  // Load initial draft items from localStorage if available
-  const [orderItems, setOrderItems] = useState<OrderItemInput[]>(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to parse draft order items:', e);
-    }
-    return [{ sku_id: '', color: '', order_quantity: 1 }];
-  });
+  const {
+    orderItems,
+    previewData,
+    lastPreviewMaterials,
+    successResult,
+    errorMessage,
+    addItemRow: handleAddItemRow,
+    removeItemRow: handleRemoveItemRow,
+    updateItemRow,
+    setPreviewData,
+    setLastPreviewMaterials,
+    setSuccessResult,
+    setErrorMessage,
+    resetCart: handleReset,
+  } = useOrderCartStore();
 
   // Cached jewelry catalog for smart autocomplete and color suggestion
   const { data: jewelryCatalog = [] } = useQuery<Jewelry[]>({
@@ -42,24 +41,8 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   });
 
   const [focusedSkuIdx, setFocusedSkuIdx] = useState<number | null>(null);
-
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingProcess, setLoadingProcess] = useState(false);
-  
-  const [previewData, setPreviewData] = useState<OrderPreviewResponse | null>(null);
-  const [successResult, setSuccessResult] = useState<OrderProcessResponse | null>(null);
-  const [lastPreviewMaterials, setLastPreviewMaterials] = useState<any[]>([]);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-
-  // Save draft order items to localStorage whenever they change
-  useEffect(() => {
-    try {
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(orderItems));
-    } catch (e) {
-      console.error('Failed to save draft order items:', e);
-    }
-  }, [orderItems]);
 
   // Unique list of SKUs in catalog
   const uniqueSkus = Array.from(new Set(jewelryCatalog.map(j => j.sku_id.trim()))).filter(Boolean);
@@ -73,46 +56,25 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     return Array.from(new Set(matches.map(j => j.color.trim()))).filter(Boolean);
   };
 
-  const handleAddItemRow = () => {
-    setOrderItems([
-      ...orderItems,
-      { sku_id: '', color: '', order_quantity: 1 }
-    ]);
-  };
-
-  const handleRemoveItemRow = (index: number) => {
-    if (orderItems.length <= 1) return;
-    setOrderItems(orderItems.filter((_, i) => i !== index));
-    setPreviewData(null);
-  };
-
   const handleItemChange = (index: number, field: keyof OrderItemInput, value: any) => {
-    const updated = [...orderItems];
-    updated[index] = { ...updated[index], [field]: value };
+    updateItemRow(index, field, value);
 
     // If SKU is changed, check if there's only 1 color and auto-fill it
     if (field === 'sku_id' && typeof value === 'string') {
       const availableColors = getColorsForSku(value);
-      if (availableColors.length === 1 && !updated[index].color) {
-        updated[index].color = availableColors[0];
+      if (availableColors.length === 1) {
+        updateItemRow(index, 'color', availableColors[0]);
       }
     }
-
-    setOrderItems(updated);
-    setPreviewData(null);
-    setErrorMessage(null);
   };
 
   const handleSelectSkuSuggestion = (index: number, selectedSku: string) => {
-    const updated = [...orderItems];
-    updated[index].sku_id = selectedSku;
+    updateItemRow(index, 'sku_id', selectedSku);
     const availableColors = getColorsForSku(selectedSku);
     if (availableColors.length === 1) {
-      updated[index].color = availableColors[0];
+      updateItemRow(index, 'color', availableColors[0]);
     }
-    setOrderItems(updated);
     setFocusedSkuIdx(null);
-    setPreviewData(null);
   };
 
   const formatErrorMsg = (detail: any): string => {
@@ -130,9 +92,18 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
   const handlePreview = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate that all rows have non-empty SKU, color, and quantity > 0
-    for (let i = 0; i < orderItems.length; i++) {
-      const item = orderItems[i];
+    // Cleanse & validate items: filter out completely empty/whitespace items
+    const nonBlankItems = orderItems.filter(
+      item => item.sku_id.trim() || item.color.trim() || item.order_quantity
+    );
+
+    if (nonBlankItems.length === 0) {
+      setErrorMessage('Please enter at least one jewelry SKU, color, and quantity.');
+      return;
+    }
+
+    for (let i = 0; i < nonBlankItems.length; i++) {
+      const item = nonBlankItems[i];
       if (!item.sku_id.trim() || !item.color.trim() || !item.order_quantity || item.order_quantity <= 0) {
         setErrorMessage(`Please fill out valid SKU ID, Color, and Quantity for Item #${i + 1}.`);
         return;
@@ -143,13 +114,22 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     setErrorMessage(null);
     setSuccessResult(null);
 
+    const validPayloadItems = nonBlankItems.map(item => ({
+      sku_id: item.sku_id.trim(),
+      color: item.color.trim(),
+      order_quantity: Math.max(1, Number(item.order_quantity) || 1)
+    }));
+
+    const first = validPayloadItems[0];
+
     try {
       const res = await api.post('/orders/preview', {
-        items: orderItems.map(item => ({
-          sku_id: item.sku_id.trim(),
-          color: item.color.trim(),
-          order_quantity: Number(item.order_quantity)
-        }))
+        // Root fields for backwards compatibility with single-item API
+        sku_id: first.sku_id,
+        color: first.color,
+        order_quantity: first.order_quantity,
+        // Batch array for full multi-item support
+        items: validPayloadItems
       });
       setPreviewData(res.data);
       if (res.data?.materials_required) {
@@ -169,17 +149,34 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     setLoadingProcess(true);
     setErrorMessage(null);
 
+    const validPayloadItems = orderItems
+      .filter(item => item.sku_id.trim() && item.color.trim() && item.order_quantity > 0)
+      .map(item => ({
+        sku_id: item.sku_id.trim(),
+        color: item.color.trim(),
+        order_quantity: Math.max(1, Number(item.order_quantity) || 1)
+      }));
+
+    if (validPayloadItems.length === 0) {
+      setErrorMessage('No valid jewelry items to process.');
+      setLoadingProcess(false);
+      return;
+    }
+
+    const first = validPayloadItems[0];
+
     try {
       if (previewData.materials_required) {
         setLastPreviewMaterials(previewData.materials_required);
       }
 
       const res = await api.post('/orders/process', {
-        items: orderItems.map(item => ({
-          sku_id: item.sku_id.trim(),
-          color: item.color.trim(),
-          order_quantity: Number(item.order_quantity)
-        }))
+        // Root fields for backwards compatibility
+        sku_id: first.sku_id,
+        color: first.color,
+        order_quantity: first.order_quantity,
+        // Batch array for multi-item support
+        items: validPayloadItems
       });
 
       setSuccessResult(res.data);
@@ -191,8 +188,8 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
       queryClient.invalidateQueries({ queryKey: ['order-history'] });
       queryClient.invalidateQueries({ queryKey: ['insights'] });
 
-      // Clear draft on successful order completion
-      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      // Reset draft on successful order completion
+      handleReset();
     } catch (err: any) {
       setErrorMessage(formatErrorMsg(err.response?.data?.detail));
     } finally {
@@ -200,14 +197,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
     }
   };
 
-  const handleReset = () => {
-    const emptyDraft = [{ sku_id: '', color: '', order_quantity: 1 }];
-    setOrderItems(emptyDraft);
-    localStorage.removeItem(DRAFT_STORAGE_KEY);
-    setPreviewData(null);
-    setSuccessResult(null);
-    setErrorMessage(null);
-  };
+
 
   // Helper to format packets needed string
   const formatPacketsNeeded = (units: number, qtyPerPacket: number) => {

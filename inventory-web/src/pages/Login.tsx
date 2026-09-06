@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase, api } from '../api/client';
 import type { UserRole } from '../types';
-import { Gem, Lock, Mail, Shield, User, ArrowRight, RefreshCw } from 'lucide-react';
+import { Gem, Lock, Mail, ArrowRight, RefreshCw, ShieldCheck } from 'lucide-react';
 
 interface LoginProps {
   onLoginSuccess: (role: UserRole, email: string, token: string) => void;
@@ -11,7 +11,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('MANAGER');
   
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -23,17 +22,15 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     try {
       if (isSignUp) {
+        // Sign up with standard credentials (defaults to MANAGER in database)
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
-          password: password,
-          options: {
-            data: { role: role }
-          }
+          password: password
         });
 
         if (error) throw error;
         if (!data.session) {
-          setErrorMsg('Registration successful! Please check your email or use Quick Demo Login below.');
+          setErrorMsg('Registration initiated! Please check your email to verify your account, or sign in.');
           setIsSignUp(false);
           setLoading(false);
           return;
@@ -41,7 +38,17 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
         const token = data.session.access_token;
         localStorage.setItem('supabase_token', token);
-        onLoginSuccess(role, email, token);
+
+        // Fetch verified database role from backend API
+        try {
+          const profileRes = await api.get('/auth/me', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const userRole = (profileRes.data.role as UserRole) || 'MANAGER';
+          onLoginSuccess(userRole, email.trim(), token);
+        } catch {
+          onLoginSuccess('MANAGER', email.trim(), token);
+        }
       } else {
         const { data, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -53,19 +60,19 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         const token = data.session.access_token;
         localStorage.setItem('supabase_token', token);
 
+        // Fetch verified database role from backend API
         try {
           const profileRes = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${token}` }
           });
-          const userRole = profileRes.data.role as UserRole;
-          onLoginSuccess(userRole, email, token);
+          const userRole = (profileRes.data.role as UserRole) || 'MANAGER';
+          onLoginSuccess(userRole, email.trim(), token);
         } catch {
-          const userRole = (data.user.user_metadata?.role as UserRole) || role;
-          onLoginSuccess(userRole, email, token);
+          onLoginSuccess('MANAGER', email.trim(), token);
         }
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check your credentials or use Quick Demo Login.');
+      setErrorMsg(err.message || 'Authentication failed. Please verify your credentials.');
     } finally {
       setLoading(false);
     }
@@ -164,52 +171,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
-          {/* Role Selector */}
-          <div>
-            <label className="pj-form-label">Select Role</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
-              <button
-                type="button"
-                onClick={() => setRole('MANAGER')}
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: role === 'MANAGER' ? '2px solid #171817' : '1px solid #CCC5B6',
-                  backgroundColor: role === 'MANAGER' ? '#E0D9CB' : '#FFFFFF',
-                  color: '#171817',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <User style={{ width: 14, height: 14 }} /> Manager
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setRole('OWNER')}
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '8px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  border: role === 'OWNER' ? '2px solid #171817' : '1px solid #CCC5B6',
-                  backgroundColor: role === 'OWNER' ? '#E0D9CB' : '#FFFFFF',
-                  color: '#171817',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.35rem'
-                }}
-              >
-                <Shield style={{ width: 14, height: 14 }} /> Owner
-              </button>
-            </div>
+          {/* Access Policy Info Box */}
+          <div style={{
+            backgroundColor: '#F8F6F1',
+            border: '1px solid #E2DCce',
+            borderRadius: '8px',
+            padding: '0.625rem 0.75rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.6875rem',
+            color: '#666'
+          }}>
+            <ShieldCheck style={{ width: 14, height: 14, color: '#A88A52', flexShrink: 0 }} />
+            <span>Accounts are provisioned as <strong>Staff / Manager</strong> by default. Owner privileges are assigned in the database.</span>
           </div>
 
           <button
@@ -222,7 +197,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <RefreshCw style={{ width: 16, height: 16 }} className="animate-spin" />
             ) : (
               <>
-                <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
+                <span>{isSignUp ? 'Create Staff Account' : 'Sign In'}</span>
                 <ArrowRight style={{ width: 16, height: 16 }} />
               </>
             )}

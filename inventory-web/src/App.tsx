@@ -10,6 +10,7 @@ import { LowStock } from './pages/LowStock';
 import { Insights } from './pages/Insights';
 import { Backup } from './pages/Backup';
 import { SecurityDashboard } from './pages/SecurityDashboard';
+import { api } from './api/client';
 import type { UserRole } from './types';
 
 export function App() {
@@ -27,6 +28,27 @@ export function App() {
       window.removeEventListener('auth_logout', handleAuthLogout);
     };
   }, []);
+
+  // Sync role with Supabase database profiles table on load
+  useEffect(() => {
+    if (token) {
+      api.get('/auth/me')
+        .then(res => {
+          if (res.data?.role) {
+            const dbRole = res.data.role as UserRole;
+            setUserRole(dbRole);
+            localStorage.setItem('user_role', dbRole);
+          }
+          if (res.data?.email) {
+            setUserEmail(res.data.email);
+            localStorage.setItem('user_email', res.data.email);
+          }
+        })
+        .catch(() => {
+          // Handled by client interceptor
+        });
+    }
+  }, [token]);
 
   const handleLoginSuccess = (role: UserRole, email: string, authToken: string) => {
     setToken(authToken);

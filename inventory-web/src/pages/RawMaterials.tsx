@@ -219,10 +219,10 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
       </div>
 
       {/* ── Search & Filter Controls ── */}
-      <div className="pj-search-box" style={{ position: 'relative', zIndex: 30 }}>
+      <div className="pj-search-box" style={{ position: 'relative', zIndex: focusedSearch ? 25 : 5 }}>
         <div className="search-grid">
           {/* Name Search with Smart Autocomplete */}
-          <div style={{ position: 'relative', zIndex: focusedSearch === 'name' ? 35 : 1 }}>
+          <div style={{ position: 'relative', zIndex: focusedSearch === 'name' ? 26 : 1 }}>
             <Search style={{
               position: 'absolute',
               left: '0.875rem',
@@ -256,7 +256,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
                 border: '1px solid #CCC5B6',
                 borderRadius: '8px',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
-                zIndex: 100,
+                zIndex: 30,
                 maxHeight: '220px',
                 overflowY: 'auto',
                 marginTop: '4px'
@@ -292,7 +292,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
           </div>
 
           {/* Color Filter with Smart Autocomplete */}
-          <div style={{ position: 'relative', zIndex: focusedSearch === 'color' ? 35 : 1 }}>
+          <div style={{ position: 'relative', zIndex: focusedSearch === 'color' ? 26 : 1 }}>
             <Search style={{
               position: 'absolute',
               left: '0.875rem',
@@ -326,7 +326,7 @@ export const RawMaterials: React.FC<RawMaterialsProps> = ({ userRole }) => {
                 border: '1px solid #CCC5B6',
                 borderRadius: '8px',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
-                zIndex: 100,
+                zIndex: 30,
                 maxHeight: '200px',
                 overflowY: 'auto',
                 marginTop: '4px'

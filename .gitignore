@@ -3,3 +3,15 @@ inventory-api/venv
 inventory-web/.env
 .agents
 graphify-out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+.vite/

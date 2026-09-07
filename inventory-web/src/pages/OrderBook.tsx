@@ -493,7 +493,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                     gap: '0.75rem',
                     boxShadow: '0 1px 3px rgba(23, 24, 23, 0.02)',
                     position: 'relative',
-                    zIndex: focusedSkuIdx === idx ? 40 : 1
+                    zIndex: focusedSkuIdx === idx ? 20 : 1
                   }}
                 >
                   <div style={{
@@ -503,7 +503,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                     alignItems: 'flex-start'
                   }}>
                     {/* SKU ID Input with Smart Autocomplete */}
-                    <div style={{ position: 'relative', zIndex: focusedSkuIdx === idx ? 50 : 1 }}>
+                    <div style={{ position: 'relative', zIndex: focusedSkuIdx === idx ? 25 : 1 }}>
                       <label className="pj-form-label" style={{ fontSize: '0.6875rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                         <Search style={{ width: 11, height: 11, color: '#A88A52' }} /> Jewelry #{idx + 1} SKU ID *
                       </label>
@@ -531,7 +531,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({ userRole }) => {
                           border: '1px solid #CCC5B6',
                           borderRadius: '8px',
                           boxShadow: '0 8px 24px rgba(0, 0, 0, 0.16)',
-                          zIndex: 100,
+                          zIndex: 30,
                           maxHeight: '180px',
                           overflowY: 'auto',
                           marginTop: '4px'

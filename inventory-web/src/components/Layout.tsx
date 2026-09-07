@@ -31,7 +31,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', background: 'var(--color-paper)', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100svh', display: 'flex', flexDirection: 'column', background: 'var(--color-paper)', overflowX: 'clip' }}>
 
       {/* ── Mobile Top Header ── */}
       <header
@@ -46,7 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
           borderBottom: `1px solid var(--color-border)`,
           position: 'sticky',
           top: 0,
-          zIndex: 30,
+          zIndex: 50,
           boxShadow: '0 1px 6px oklch(18% 0.010 75 / 0.07)',
         }}
       >
@@ -259,7 +259,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
             maxWidth: '1200px',
             width: '100%',
             /* Extra bottom pad on mobile for bottom nav */
-            paddingBottom: 'calc(var(--space-5) + 76px)',
+            paddingBottom: 'calc(var(--space-6) + 84px + env(safe-area-inset-bottom, 0px))',
           }}
           className="md:!pb-8 md:!p-8"
         >
@@ -274,7 +274,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 40,
+            zIndex: 70,
             background: 'oklch(18% 0.010 75 / 0.40)',
             backdropFilter: 'blur(3px)',
             WebkitBackdropFilter: 'blur(3px)',
@@ -408,7 +408,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
           bottom: 0,
           left: 0,
           right: 0,
-          zIndex: 20,
+          zIndex: 60,
           background: 'var(--color-card)',
           borderTop: `1px solid var(--color-border)`,
           display: 'flex',

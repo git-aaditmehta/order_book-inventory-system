@@ -259,7 +259,7 @@ export const Layout: React.FC<LayoutProps> = ({ userRole, userEmail, onLogout })
             maxWidth: '1200px',
             width: '100%',
             /* Extra bottom pad on mobile for bottom nav */
-            paddingBottom: 'calc(var(--space-6) + 84px + env(safe-area-inset-bottom, 0px))',
+            paddingBottom: 'calc(var(--space-6) + 110px + env(safe-area-inset-bottom, 0px))',
           }}
           className="md:!pb-8 md:!p-8"
         >

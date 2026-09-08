@@ -27,12 +27,14 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const { data: summary = null, isLoading: loading, refetch: fetchSummary } = useQuery<BackupSummary | null>({
+  const { data: summary = null, isLoading: loading, error: queryError, refetch: fetchSummary } = useQuery<BackupSummary | null>({
     queryKey: ['backup-summary'],
     queryFn: async () => {
       const res = await api.get('/backup/summary');
       return res.data;
-    }
+    },
+    retry: 2,
+    staleTime: 60 * 1000,
   });
 
   const getTimestamp = () => {
@@ -366,284 +368,300 @@ export const Backup: React.FC<BackupProps> = ({ userRole }) => {
         </div>
       )}
 
-      {/* ── Metric Summary Cards ── */}
-      {loading && !summary ? (
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '3rem 0', gap: '0.75rem' }}>
-          <RefreshCw className="w-6 h-6 animate-spin" style={{ color: '#A88A52' }} />
-          <span style={{ fontSize: '0.875rem', color: '#52504B' }}>Reading database tables telemetry…</span>
+      {/* ── Telemetry Status Alert (if telemetry fails) ── */}
+      {queryError && (
+        <div style={{
+          backgroundColor: '#FDF8ED',
+          border: '1px solid #E8DECA',
+          borderRadius: '8px',
+          padding: '0.75rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '0.75rem',
+          color: '#7A6438',
+          fontSize: '0.8125rem'
+        }}>
+          <span>Live database telemetry is currently unavailable. You can still download all Excel backups below.</span>
+          <button
+            onClick={() => fetchSummary()}
+            className="pj-action-btn-ghost"
+            style={{ padding: '0.3rem 0.625rem', fontSize: '0.75rem', whiteSpace: 'nowrap' }}
+          >
+            Retry Stats
+          </button>
         </div>
-      ) : summary && (
-        <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
-            <div className="pj-stat-card">
-              <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Package style={{ width: 14, height: 14, color: '#7A6438' }} /> Raw Materials
-              </span>
-              <p className="pj-stat-number">{summary.raw_materials_count}</p>
-              <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
-                {summary.raw_materials_active} active in catalog
-              </span>
-            </div>
-
-            <div className="pj-stat-card">
-              <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Gem style={{ width: 14, height: 14, color: '#7A6438' }} /> Jewelry & Recipes
-              </span>
-              <p className="pj-stat-number">{summary.jewelry_count}</p>
-              <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
-                {summary.recipes_count} BOM component links
-              </span>
-            </div>
-
-            <div className="pj-stat-card">
-              <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <History style={{ width: 14, height: 14, color: '#7A6438' }} /> Orders Ledger
-              </span>
-              <p className="pj-stat-number">{summary.orders_count}</p>
-              <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
-                Total recorded transactions
-              </span>
-            </div>
-
-            <div className="pj-stat-card">
-              <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Sparkles style={{ width: 14, height: 14, color: '#7A6438' }} /> Raw Material Valuation
-              </span>
-              <p className="pj-stat-number" style={{ color: '#7A6438' }}>
-                {summary.raw_materials_valuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
-                Total stock asset value
-              </span>
-            </div>
-          </div>
-
-          {/* ── Featured Master Backup Card ── */}
-          <div style={{
-            background: 'linear-gradient(135deg, #FBF8F2 0%, #EFE9DC 100%)',
-            border: '2px solid #D0C3AA',
-            borderRadius: '12px',
-            padding: '1.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                  <span style={{
-                    backgroundColor: '#A88A52',
-                    color: '#FFF',
-                    fontSize: '0.6875rem',
-                    fontWeight: 800,
-                    padding: '0.2rem 0.5rem',
-                    borderRadius: '4px',
-                    letterSpacing: '0.05em',
-                    textTransform: 'uppercase'
-                  }}>
-                    Recommended
-                  </span>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#171817' }}>
-                    Complete Master System Backup (.xlsx)
-                  </h2>
-                </div>
-                <p style={{ fontSize: '0.875rem', color: '#52504B', maxWidth: '750px', lineHeight: 1.45 }}>
-                  Downloads a multi-worksheet Excel spreadsheet compiling all tables: <strong>Raw Materials</strong>, <strong>Jewelry Catalog</strong>, <strong>BOM Recipes</strong>, and the complete <strong>Order Ledger</strong> with timestamps and financial calculations.
-                </p>
-              </div>
-
-              <button
-                onClick={handleDownloadMasterBackup}
-                disabled={exporting !== null}
-                className="pj-btn-primary"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.625rem',
-                  padding: '0.75rem 1.5rem',
-                  fontSize: '0.9375rem',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                {exporting === 'all' ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Compiling All Sheets…</span>
-                  </>
-                ) : (
-                  <>
-                    <FileSpreadsheet style={{ width: 20, height: 20 }} />
-                    <span>Download All Tables (.xlsx)</span>
-                  </>
-                )}
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #E0D6C3' }}>
-              <span style={{ fontSize: '0.75rem', color: '#7A6438', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <CheckCircle2 style={{ width: 14, height: 14 }} /> 4 Formatted Worksheets
-              </span>
-              <span style={{ fontSize: '0.75rem', color: '#7A6438', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <CheckCircle2 style={{ width: 14, height: 14 }} /> Auto-fitted column widths
-              </span>
-              <span style={{ fontSize: '0.75rem', color: '#7A6438', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                <CheckCircle2 style={{ width: 14, height: 14 }} /> Supabase PostgreSQL live dump
-              </span>
-            </div>
-          </div>
-
-          {/* ── Individual Table Downloads Section ── */}
-          <div className="space-y-4">
-            <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#171817', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Layers style={{ width: 20, height: 20, color: '#A88A52' }} /> Individual Table Downloads
-            </h2>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
-              
-              {/* Card 1: Raw Materials */}
-              <div className="pj-stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Package style={{ width: 20, height: 20, color: '#A88A52' }} />
-                      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Raw Materials</h3>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7A6438', backgroundColor: '#EFE9DC', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                      {summary.raw_materials_count} Rows
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#52504B', lineHeight: 1.4 }}>
-                    Stock levels (packets & loose units), quantity per packet, unit cost, inventory asset valuation, and archive statuses.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleDownloadRawMaterials}
-                  disabled={exporting !== null}
-                  className="pj-action-btn-ghost"
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.625rem',
-                    fontWeight: 700,
-                    borderRadius: '8px'
-                  }}
-                >
-                  {exporting === 'raw_materials' ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Exporting…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download style={{ width: 16, height: 16 }} />
-                      <span>Download Raw Materials (.xlsx)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Card 2: Jewelry & Recipes */}
-              <div className="pj-stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Gem style={{ width: 20, height: 20, color: '#A88A52' }} />
-                      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Jewelry & BOM Recipes</h3>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7A6438', backgroundColor: '#EFE9DC', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                      {summary.jewelry_count} Models
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#52504B', lineHeight: 1.4 }}>
-                    SKU IDs, color variants, weights before/after, full bill-of-materials recipe breakdowns, component costs, and calculated unit totals.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleDownloadJewelryRecipes}
-                  disabled={exporting !== null}
-                  className="pj-action-btn-ghost"
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.625rem',
-                    fontWeight: 700,
-                    borderRadius: '8px'
-                  }}
-                >
-                  {exporting === 'jewelry' ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Exporting…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download style={{ width: 16, height: 16 }} />
-                      <span>Download Jewelry & Recipes (.xlsx)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Card 3: Orders History */}
-              <div className="pj-stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <History style={{ width: 20, height: 20, color: '#A88A52' }} />
-                      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Orders Ledger</h3>
-                    </div>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7A6438', backgroundColor: '#EFE9DC', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
-                      {summary.orders_count} Orders
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.8125rem', color: '#52504B', lineHeight: 1.4 }}>
-                    Complete audit trail of placed batch orders, item quantities, timestamped atomic stock deductions, and recorded costs.
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleDownloadOrders}
-                  disabled={exporting !== null}
-                  className="pj-action-btn-ghost"
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.625rem',
-                    fontWeight: 700,
-                    borderRadius: '8px'
-                  }}
-                >
-                  {exporting === 'orders' ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Exporting…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download style={{ width: 16, height: 16 }} />
-                      <span>Download Orders Ledger (.xlsx)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-            </div>
-          </div>
-        </>
       )}
+
+      {/* ── Metric Summary Cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+        <div className="pj-stat-card">
+          <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Package style={{ width: 14, height: 14, color: '#7A6438' }} /> Raw Materials
+          </span>
+          <p className="pj-stat-number">{loading ? '…' : (summary?.raw_materials_count ?? '—')}</p>
+          <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
+            {summary ? `${summary.raw_materials_active} active in catalog` : 'Production catalog items'}
+          </span>
+        </div>
+
+        <div className="pj-stat-card">
+          <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Gem style={{ width: 14, height: 14, color: '#7A6438' }} /> Jewelry & Recipes
+          </span>
+          <p className="pj-stat-number">{loading ? '…' : (summary?.jewelry_count ?? '—')}</p>
+          <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
+            {summary ? `${summary.recipes_count} BOM component links` : 'Designs & formula recipes'}
+          </span>
+        </div>
+
+        <div className="pj-stat-card">
+          <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <History style={{ width: 14, height: 14, color: '#7A6438' }} /> Orders Ledger
+          </span>
+          <p className="pj-stat-number">{loading ? '…' : (summary?.orders_count ?? '—')}</p>
+          <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
+            Total recorded transactions
+          </span>
+        </div>
+
+        <div className="pj-stat-card">
+          <span className="pj-stat-label" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <Sparkles style={{ width: 14, height: 14, color: '#7A6438' }} /> Raw Material Valuation
+          </span>
+          <p className="pj-stat-number" style={{ color: '#7A6438' }}>
+            {loading ? '…' : summary ? summary.raw_materials_valuation.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+          </p>
+          <span style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem', display: 'block' }}>
+            Total stock asset value
+          </span>
+        </div>
+      </div>
+
+      {/* ── Featured Master Backup Card ── */}
+      <div style={{
+        background: 'linear-gradient(135deg, #FBF8F2 0%, #EFE9DC 100%)',
+        border: '2px solid #D0C3AA',
+        borderRadius: '12px',
+        padding: '1.5rem',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+              <span style={{
+                backgroundColor: '#A88A52',
+                color: '#FFF',
+                fontSize: '0.6875rem',
+                fontWeight: 800,
+                padding: '0.2rem 0.5rem',
+                borderRadius: '4px',
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase'
+              }}>
+                Recommended
+              </span>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#171817' }}>
+                Complete Master System Backup (.xlsx)
+              </h2>
+            </div>
+            <p style={{ fontSize: '0.875rem', color: '#52504B', maxWidth: '750px', lineHeight: 1.45 }}>
+              Downloads a multi-worksheet Excel spreadsheet compiling all tables: <strong>Raw Materials</strong>, <strong>Jewelry Catalog</strong>, <strong>BOM Recipes</strong>, and the complete <strong>Order Ledger</strong> with timestamps and financial calculations.
+            </p>
+          </div>
+
+          <button
+            onClick={handleDownloadMasterBackup}
+            disabled={exporting !== null}
+            className="pj-btn-primary"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.625rem',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.9375rem',
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {exporting === 'all' ? (
+              <>
+                <RefreshCw className="w-5 h-5 animate-spin" />
+                <span>Compiling All Sheets…</span>
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet style={{ width: 20, height: 20 }} />
+                <span>Download All Tables (.xlsx)</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #E0D6C3' }}>
+          <span style={{ fontSize: '0.75rem', color: '#7A6438', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <CheckCircle2 style={{ width: 14, height: 14 }} /> 4 Formatted Worksheets
+          </span>
+          <span style={{ fontSize: '0.75rem', color: '#7A6438', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <CheckCircle2 style={{ width: 14, height: 14 }} /> Auto-fitted column widths
+          </span>
+          <span style={{ fontSize: '0.75rem', color: '#7A6438', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <CheckCircle2 style={{ width: 14, height: 14 }} /> Supabase PostgreSQL live dump
+          </span>
+        </div>
+      </div>
+
+      {/* ── Individual Table Downloads Section ── */}
+      <div className="space-y-4">
+        <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#171817', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Layers style={{ width: 20, height: 20, color: '#A88A52' }} /> Individual Table Downloads
+        </h2>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.25rem' }}>
+          
+          {/* Card 1: Raw Materials */}
+          <div className="pj-stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Package style={{ width: 20, height: 20, color: '#A88A52' }} />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Raw Materials</h3>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7A6438', backgroundColor: '#EFE9DC', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                  {summary?.raw_materials_count ? `${summary.raw_materials_count} Rows` : 'Raw Materials Table'}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.8125rem', color: '#52504B', lineHeight: 1.4 }}>
+                Stock levels (packets & loose units), quantity per packet, unit cost, inventory asset valuation, and archive statuses.
+              </p>
+            </div>
+
+            <button
+              onClick={handleDownloadRawMaterials}
+              disabled={exporting !== null}
+              className="pj-action-btn-ghost"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.625rem',
+                fontWeight: 700,
+                borderRadius: '8px'
+              }}
+            >
+              {exporting === 'raw_materials' ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Exporting…</span>
+                </>
+              ) : (
+                <>
+                  <Download style={{ width: 16, height: 16 }} />
+                  <span>Download Raw Materials (.xlsx)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Card 2: Jewelry & Recipes */}
+          <div className="pj-stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Gem style={{ width: 20, height: 20, color: '#A88A52' }} />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Jewelry & BOM Recipes</h3>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7A6438', backgroundColor: '#EFE9DC', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                  {summary?.jewelry_count ? `${summary.jewelry_count} Models` : 'Jewelry & BOM Recipes'}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.8125rem', color: '#52504B', lineHeight: 1.4 }}>
+                SKU IDs, color variants, weights before/after, full bill-of-materials recipe breakdowns, component costs, and calculated unit totals.
+              </p>
+            </div>
+
+            <button
+              onClick={handleDownloadJewelryRecipes}
+              disabled={exporting !== null}
+              className="pj-action-btn-ghost"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.625rem',
+                fontWeight: 700,
+                borderRadius: '8px'
+              }}
+            >
+              {exporting === 'jewelry' ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Exporting…</span>
+                </>
+              ) : (
+                <>
+                  <Download style={{ width: 16, height: 16 }} />
+                  <span>Download Jewelry & Recipes (.xlsx)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Card 3: Orders History */}
+          <div className="pj-stat-card" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1rem' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <History style={{ width: 20, height: 20, color: '#A88A52' }} />
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#171817' }}>Orders Ledger</h3>
+                </div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7A6438', backgroundColor: '#EFE9DC', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                  {summary?.orders_count ? `${summary.orders_count} Orders` : 'Orders Ledger'}
+                </span>
+              </div>
+              <p style={{ fontSize: '0.8125rem', color: '#52504B', lineHeight: 1.4 }}>
+                Complete audit trail of placed batch orders, item quantities, timestamped atomic stock deductions, and recorded costs.
+              </p>
+            </div>
+
+            <button
+              onClick={handleDownloadOrders}
+              disabled={exporting !== null}
+              className="pj-action-btn-ghost"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.625rem',
+                fontWeight: 700,
+                borderRadius: '8px'
+              }}
+            >
+              {exporting === 'orders' ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Exporting…</span>
+                </>
+              ) : (
+                <>
+                  <Download style={{ width: 16, height: 16 }} />
+                  <span>Download Orders Ledger (.xlsx)</span>
+                </>
+              )}
+            </button>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };

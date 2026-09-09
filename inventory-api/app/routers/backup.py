@@ -27,9 +27,16 @@ async def get_backup_summary(current_user: UserProfile = Depends(require_owner))
         recipes_res = supabase.table("jewelry_recipes").select("id").execute()
         recipes_count = len(recipes_res.data or [])
 
-        orders_res = supabase.table("order_transactions").select("id, total_order_cost").execute()
+        orders_res = supabase.table("order_transactions").select("id, batch_id, total_order_cost").execute()
         orders_data = orders_res.data or []
-        total_orders_cost = sum(float(o.get("total_order_cost", 0) or 0) for o in orders_data)
+        
+        seen_batches = set()
+        total_orders_cost = 0.0
+        for o in orders_data:
+            b_key = o.get("batch_id") or o.get("id")
+            if b_key not in seen_batches:
+                seen_batches.add(b_key)
+                total_orders_cost += float(o.get("total_order_cost", 0) or 0)
 
         return {
             "raw_materials_count": len(rm_data),

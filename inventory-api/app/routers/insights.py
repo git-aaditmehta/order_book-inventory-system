@@ -36,31 +36,39 @@ async def get_insights_summary(
     res = query.execute()
     transactions = res.data or []
     
-    total_orders = len(transactions)
+    processed_batches = set()
     total_revenue_cost = 0.0
     material_usage: Dict[str, Dict[str, Any]] = {}
     jewelry_orders: Dict[str, int] = {}
     
     for tx in transactions:
-        total_revenue_cost += float(tx.get("total_order_cost") or 0.0)
+        # Granular item-level count for every jewelry piece ordered
         sku_color = f"{tx.get('sku_id')} ({tx.get('color')})"
         jewelry_orders[sku_color] = jewelry_orders.get(sku_color, 0) + tx.get("order_quantity", 0)
         
-        materials = tx.get("materials_summary") or []
-        for mat in materials:
-            name_color = f"{mat.get('name')} - {mat.get('color')}"
-            units = mat.get("units_used", 0)
-            cost = float(mat.get("line_cost") or 0.0)
+        # Batch-level deduplication: cost and material deductions belong to the batch
+        batch_key = tx.get("batch_id") or tx.get("id")
+        if batch_key not in processed_batches:
+            processed_batches.add(batch_key)
+            total_revenue_cost += float(tx.get("total_order_cost") or 0.0)
             
-            if name_color not in material_usage:
-                material_usage[name_color] = {
-                    "name": mat.get("name"),
-                    "color": mat.get("color"),
-                    "total_units_used": 0,
-                    "total_line_cost": 0.0
-                }
-            material_usage[name_color]["total_units_used"] += units
-            material_usage[name_color]["total_line_cost"] += cost
+            materials = tx.get("materials_summary") or []
+            for mat in materials:
+                name_color = f"{mat.get('name')} - {mat.get('color')}"
+                units = mat.get("units_used", 0)
+                cost = float(mat.get("line_cost") or 0.0)
+                
+                if name_color not in material_usage:
+                    material_usage[name_color] = {
+                        "name": mat.get("name"),
+                        "color": mat.get("color"),
+                        "total_units_used": 0,
+                        "total_line_cost": 0.0
+                    }
+                material_usage[name_color]["total_units_used"] += units
+                material_usage[name_color]["total_line_cost"] += cost
+
+    total_orders = len(processed_batches)
 
     # Sort top materials used
     sorted_materials = sorted(
